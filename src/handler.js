@@ -28,7 +28,6 @@ const loginHandler = (req, res) => {
       const token = jwt.sign({ id: results[0].id }, 'rahasia', { expiresIn: '1h' });
       const loginResult = {
             userId: results[0].id,
-            name: results[0].name,
             token: token
         };
 
