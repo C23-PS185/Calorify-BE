@@ -1,7 +1,7 @@
 {
   "name": "calorify-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "npm version 9.6.7",
   "main": "app.js",
   "scripts": {
     "start-dev": "nodemon src/app.js",
@@ -21,6 +21,11 @@
     "nodemon": "^2.0.22"
   },
   "devDependencies": {
-    "eslint": "^8.40.0"
-  }
+    "eslint": "^8.41.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-promise": "^6.1.1"
+  },
+  "keywords": []
 }

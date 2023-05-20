@@ -1,23 +1,22 @@
-const express = require("express");
-const router = express.Router();
+const express = require('express')
+const router = express.Router()
 
 const {
   register,
   login,
   forgetPassword,
   logout,
-} = require("./auth");
+  completeData
+} = require('./auth')
 
+router.post('/register', register)
 
+router.post('/login', login)
 
-router.post("/register", register);
+router.post('/forget-password', forgetPassword)
 
-router.post("/login", login);
+router.post('/logout', logout)
 
-router.post("/forget-password", forgetPassword);
+router.post('/complete-data', completeData)
 
-router.post("/logout", logout);
-
-
-
-module.exports = router;
+module.exports = router
