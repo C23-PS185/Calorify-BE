@@ -1,14 +1,23 @@
+const express = require("express");
+const router = express.Router();
+
 const {
-    loginHandler
-} = require('./handler');
+  register,
+  login,
+  forgetPassword,
+  logout,
+} = require("./auth");
 
 
-const routes = [
-    {
-        method: 'POST',
-        path : '/login',
-        handler: loginHandler,
-    },
-];
 
-module.exports = routes;
+router.post("/register", register);
+
+router.post("/login", login);
+
+router.post("/forget-password", forgetPassword);
+
+router.post("/logout", logout);
+
+
+
+module.exports = router;
