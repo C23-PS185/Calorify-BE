@@ -114,6 +114,7 @@ exports.forgetPassword = (req, res) => {
     })
 }
 
+// User Information
 exports.completeData = (req, res) => {
   const createdAt = new Date().toISOString()
   const { fullName, birthDate, gender, userWeight, userHeight } = req.body
