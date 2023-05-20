@@ -1,21 +1,18 @@
-const firebase = require('firebase/app');
-require('firebase/auth');
-require('firebase/firestore');
-require('dotenv').config();
+const firebase = require('firebase/app')
+require('firebase/auth')
+require('firebase/firestore')
+require('dotenv').config()
 
 const firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBAE_AUTH_DOMAIN,
-    databaseURL: process.env.FIREBASE_DATABASE_URL,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-    measurementId: process.env.FIREBASE_MEASUREMENT_ID,
-};
+  apiKey: 'AIzaSyB0RGz3RUyRhK6dUX7RmN8N4lAPh6RnmJU',
+  authDomain: 'try-signup.firebaseapp.com',
+  projectId: 'try-signup',
+  storageBucket: 'try-signup.appspot.com',
+  messagingSenderId: '741807009738',
+  appId: '1:741807009738:web:4c1f8a807803a404c6a933',
+  measurementId: 'G-MBS2HYCC7E'
+}
 
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig)
 
-module.exports = firebase;
-
-
+module.exports = firebase
