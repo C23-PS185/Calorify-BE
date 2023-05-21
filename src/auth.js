@@ -5,7 +5,7 @@ const db = firebase.firestore()
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'Email Wajib Diisi',
+      email: 'email is required',
       password: 'password is required'
     })
   }
