@@ -120,7 +120,7 @@ exports.forgetPassword = (req, res) => {
 }
 
 // User Information
-exports.completeData = (req, res) => {
+exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
   const birthDate = new Date(req.body.birthDate)
   const userId = firebase.auth().currentUser.uid
