@@ -5,10 +5,15 @@ const db = firebase.firestore()
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'email is required',
-      password: 'password is required'
+      email: 'Email is required',
+      password: 'Password is required'
     })
   }
+
+  if (req.body.passwordConfirmation !== req.body.password) {
+    return res.status(400).json({ message: 'Password didnt match' })
+  }
+
   firebase
     .auth()
     .createUserWithEmailAndPassword(req.body.email, req.body.password)
@@ -30,8 +35,8 @@ exports.register = (req, res) => {
 exports.login = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'email is required',
-      password: 'password is required'
+      email: 'Email is required',
+      password: 'Password is required'
     })
   }
   firebase
@@ -81,7 +86,7 @@ exports.verifyEmail = (req, res) => {
     .auth()
     .currentUser.sendEmailVerification()
     .then(function () {
-      return res.status(200).json({ status: 'Email Verification Sent!' })
+      return res.status(200).json({ status: 'Email verification has been sent!' })
     })
     .catch(function (error) {
       const errorCode = error.code
@@ -95,13 +100,13 @@ exports.verifyEmail = (req, res) => {
 // forget password
 exports.forgetPassword = (req, res) => {
   if (!req.body.email) {
-    return res.status(422).json({ email: 'email is required' })
+    return res.status(422).json({ email: 'Email is required.' })
   }
   firebase
     .auth()
     .sendPasswordResetEmail(req.body.email)
     .then(function () {
-      return res.status(200).json({ status: 'Password Reset Email Sent' })
+      return res.status(200).json({ status: 'Password reset email has been sent!' })
     })
     .catch(function (error) {
       const errorCode = error.code
@@ -117,30 +122,30 @@ exports.forgetPassword = (req, res) => {
 // User Information
 exports.completeData = (req, res) => {
   const createdAt = new Date().toISOString()
-  const { fullName, birthDate, gender, userWeight, userHeight } = req.body
+  const birthDate = new Date(req.body.birthDate)
   const userId = firebase.auth().currentUser.uid
   const email = firebase.auth().currentUser.email
 
   const userData = {
     userId,
     email,
-    fullName,
-    birthDate: new Date(birthDate),
-    gender,
-    userWeight,
-    userHeight,
-    createdAt
+    createdAt,
+    fullName: req.body.fullName,
+    birthDate,
+    gender: req.body.gender,
+    userWeight: req.body.userWeight,
+    userHeight: req.body.userHeight
   }
 
-  if (!fullName || !birthDate || !gender || !userWeight || !userHeight) {
-    return res.status(400).json({ message: 'Wajib diisi' })
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight) {
+    return res.status(400).json({ message: 'Required.' })
   }
 
   db.collection('users').add(userData)
     .then(() => {
-      return res.status(200).json({ message: 'Informasi tambahan berhasil disimpan' })
+      return res.status(200).json({ message: 'Information saved successfully!' })
     })
     .catch((e) => {
-      return res.status(500).json({ message: 'Terjadi kesalahan saat menyimpan informasi tambahan' })
+      return res.status(500).json({ message: 'Error.' })
     })
 }
