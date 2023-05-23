@@ -5,28 +5,41 @@ const db = firebase.firestore()
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'Email is required',
-      password: 'Password is required'
+      error: true,
+      message: 'Email and password is required'
     })
   }
 
   if (req.body.passwordConfirmation !== req.body.password) {
-    return res.status(400).json({ message: 'Password didnt match' })
+    return res.status(400).json({
+      error: true,
+      message: 'Password didnt match'
+    })
   }
 
   firebase
     .auth()
     .createUserWithEmailAndPassword(req.body.email, req.body.password)
     .then((data) => {
-      return res.status(201).json(data)
+      return res.status(201).json({
+        error: false,
+        message: 'User created',
+        data
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/weak-password') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -35,23 +48,33 @@ exports.register = (req, res) => {
 exports.login = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'Email is required',
-      password: 'Password is required'
+      error: true,
+      message: 'Email and password is required'
     })
   }
   firebase
     .auth()
     .signInWithEmailAndPassword(req.body.email, req.body.password)
     .then((user) => {
-      return res.status(200).json(user)
+      return res.status(200).json({
+        error: false,
+        message: 'User logged in',
+        user
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
-      if (errorCode === 'auth/wrong-password') {
-        return res.status(500).json({ error: errorMessage })
+      if (errorCode === 'auth/weak-password') {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -65,17 +88,27 @@ exports.logout = (req, res) => {
       .auth()
       .signOut()
       .then((user) => {
-        return res.status(200).json({ user, status: 'Logout Successfully!' })
+        return res.status(200).json({
+          error: false,
+          message: 'Logout Successfully!',
+          user
+        })
       })
       .catch(function (error) {
         const errorCode = error.code
         const errorMessage = error.message
         if (errorCode === 'auth/too-many-requests') {
-          return res.status(500).json({ error: errorMessage })
+          return res.status(500).json({
+            error: true,
+            message: errorMessage
+          })
         }
       })
   } else {
-    return res.status(500).json({ error: 'User not found!' })
+    return res.status(500).json({
+      error: true,
+      message: 'User not found!'
+    })
   }
 }
 
@@ -86,13 +119,19 @@ exports.verifyEmail = (req, res) => {
     .auth()
     .currentUser.sendEmailVerification()
     .then(function () {
-      return res.status(200).json({ status: 'Email verification has been sent!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Email verification has been sent!'
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/too-many-requests') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -100,21 +139,33 @@ exports.verifyEmail = (req, res) => {
 // forget password
 exports.forgetPassword = (req, res) => {
   if (!req.body.email) {
-    return res.status(422).json({ email: 'Email is required.' })
+    return res.status(422).json({
+      error: true,
+      message: 'Email is required'
+    })
   }
   firebase
     .auth()
     .sendPasswordResetEmail(req.body.email)
     .then(function () {
-      return res.status(200).json({ status: 'Password reset email has been sent!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Password reset email has been sent!'
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/invalid-email') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else if (errorCode === 'auth/user-not-found') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -230,14 +281,23 @@ exports.addUserData = (req, res) => {
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || !req.body.activityLevel || !req.body.stressLevel || !req.body.weightGoal) {
-    return res.status(400).json({ message: 'Required.' })
+    return res.status(400).json({
+      error: true,
+      message: 'Required.'
+    })
   }
 
   db.collection('users').add(userData)
     .then(() => {
-      return res.status(200).json({ message: 'Information saved successfully!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Information saved successfully!'
+      })
     })
     .catch((e) => {
-      return res.status(500).json({ message: 'Error.' })
+      return res.status(500).json({
+        error: true,
+        message: e
+      })
     })
 }
