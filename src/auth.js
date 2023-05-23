@@ -126,6 +126,97 @@ exports.addUserData = (req, res) => {
   const userId = firebase.auth().currentUser.uid
   const email = firebase.auth().currentUser.email
 
+  // Get user age
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const m = today.getMonth() - birthDate.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+
+  // Calorie calculation
+  const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
+  const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
+
+  // Get activity value
+  let activityValue = 0
+
+  switch (req.body.activityLevel) {
+    case 0:
+      activityValue = 1.1
+      break
+    case 1:
+      activityValue = 1.2
+      break
+    case 2:
+      activityValue = 1.3
+      break
+    default:
+      activityValue = 1.1
+      break
+  }
+
+  // Get stress value
+  let stressValue = 0
+  switch (req.body.stressLevel) {
+    case 0:
+      stressValue = 1.1
+      break
+    case 1:
+      stressValue = 1.3
+      break
+    case 2:
+      stressValue = 1.45
+      break
+    case 3:
+      stressValue = 1.55
+      break
+    case 4:
+      stressValue = 1.7
+      break
+    default:
+      stressValue = 1.1
+      break
+  }
+
+  console.log('stressValue : ' + stressValue)
+
+  // Calorie intake calculation
+  let calorieIntake = 0
+  switch (req.body.gender) {
+    case 'Laki-Laki':
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+    case 'Perempuan':
+      calorieIntake = femaleBMR * activityValue * stressValue
+      break
+    default:
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+  }
+
+  // Set user calorie intake based on weightGoal
+  switch (req.body.weightGoal) {
+    case 0:
+      calorieIntake = Math.round(calorieIntake * 0.6)
+      break
+    case 1:
+      calorieIntake = Math.round(calorieIntake * 0.8)
+      break
+    case 2:
+      calorieIntake = Math.round(calorieIntake)
+      break
+    case 3:
+      calorieIntake = Math.round(calorieIntake * 1.2)
+      break
+    case 4:
+      calorieIntake = Math.round(calorieIntake * 1.4)
+      break
+    default:
+      calorieIntake = Math.round(calorieIntake)
+      break
+  }
+
   const userData = {
     userId,
     email,
@@ -134,10 +225,11 @@ exports.addUserData = (req, res) => {
     birthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
-    userHeight: req.body.userHeight
+    userHeight: req.body.userHeight,
+    userCalorieIntake: calorieIntake
   }
 
-  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight) {
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || !req.body.activityLevel || !req.body.stressLevel || !req.body.weightGoal) {
     return res.status(400).json({ message: 'Required.' })
   }
 
