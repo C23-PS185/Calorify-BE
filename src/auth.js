@@ -230,8 +230,6 @@ exports.addUserData = (req, res) => {
       break
   }
 
-  console.log('stressValue : ' + stressValue)
-
   // Calorie intake calculation
   let calorieIntake = 0
   switch (req.body.gender) {
@@ -280,7 +278,7 @@ exports.addUserData = (req, res) => {
     userCalorieIntake: calorieIntake
   }
 
-  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || !req.body.activityLevel || !req.body.stressLevel || !req.body.weightGoal) {
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
     return res.status(400).json({
       error: true,
       message: 'Required.'
