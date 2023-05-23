@@ -5,28 +5,41 @@ const db = firebase.firestore()
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'Email is required',
-      password: 'Password is required'
+      error: true,
+      message: 'Email and password is required'
     })
   }
 
   if (req.body.passwordConfirmation !== req.body.password) {
-    return res.status(400).json({ message: 'Password didnt match' })
+    return res.status(400).json({
+      error: true,
+      message: 'Password didnt match'
+    })
   }
 
   firebase
     .auth()
     .createUserWithEmailAndPassword(req.body.email, req.body.password)
     .then((data) => {
-      return res.status(201).json(data)
+      return res.status(201).json({
+        error: false,
+        message: 'User created',
+        data
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/weak-password') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -35,23 +48,33 @@ exports.register = (req, res) => {
 exports.login = (req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(422).json({
-      email: 'Email is required',
-      password: 'Password is required'
+      error: true,
+      message: 'Email and password is required'
     })
   }
   firebase
     .auth()
     .signInWithEmailAndPassword(req.body.email, req.body.password)
     .then((user) => {
-      return res.status(200).json(user)
+      return res.status(200).json({
+        error: false,
+        message: 'User logged in',
+        user
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
-      if (errorCode === 'auth/wrong-password') {
-        return res.status(500).json({ error: errorMessage })
+      if (errorCode === 'auth/weak-password') {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -65,17 +88,27 @@ exports.logout = (req, res) => {
       .auth()
       .signOut()
       .then((user) => {
-        return res.status(200).json({ user, status: 'Logout Successfully!' })
+        return res.status(200).json({
+          error: false,
+          message: 'Logout Successfully!',
+          user
+        })
       })
       .catch(function (error) {
         const errorCode = error.code
         const errorMessage = error.message
         if (errorCode === 'auth/too-many-requests') {
-          return res.status(500).json({ error: errorMessage })
+          return res.status(500).json({
+            error: true,
+            message: errorMessage
+          })
         }
       })
   } else {
-    return res.status(500).json({ error: 'User not found!' })
+    return res.status(500).json({
+      error: true,
+      message: 'User not found!'
+    })
   }
 }
 
@@ -86,13 +119,19 @@ exports.verifyEmail = (req, res) => {
     .auth()
     .currentUser.sendEmailVerification()
     .then(function () {
-      return res.status(200).json({ status: 'Email verification has been sent!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Email verification has been sent!'
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/too-many-requests') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -100,21 +139,33 @@ exports.verifyEmail = (req, res) => {
 // forget password
 exports.forgetPassword = (req, res) => {
   if (!req.body.email) {
-    return res.status(422).json({ email: 'Email is required.' })
+    return res.status(422).json({
+      error: true,
+      message: 'Email is required'
+    })
   }
   firebase
     .auth()
     .sendPasswordResetEmail(req.body.email)
     .then(function () {
-      return res.status(200).json({ status: 'Password reset email has been sent!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Password reset email has been sent!'
+      })
     })
     .catch(function (error) {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/invalid-email') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       } else if (errorCode === 'auth/user-not-found') {
-        return res.status(500).json({ error: errorMessage })
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
       }
     })
 }
@@ -126,6 +177,95 @@ exports.addUserData = (req, res) => {
   const userId = firebase.auth().currentUser.uid
   const email = firebase.auth().currentUser.email
 
+  // Get user age
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const m = today.getMonth() - birthDate.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+
+  // Calorie calculation
+  const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
+  const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
+
+  // Get activity value
+  let activityValue = 0
+
+  switch (req.body.activityLevel) {
+    case 0:
+      activityValue = 1.1
+      break
+    case 1:
+      activityValue = 1.2
+      break
+    case 2:
+      activityValue = 1.3
+      break
+    default:
+      activityValue = 1.1
+      break
+  }
+
+  // Get stress value
+  let stressValue = 0
+  switch (req.body.stressLevel) {
+    case 0:
+      stressValue = 1.1
+      break
+    case 1:
+      stressValue = 1.3
+      break
+    case 2:
+      stressValue = 1.45
+      break
+    case 3:
+      stressValue = 1.55
+      break
+    case 4:
+      stressValue = 1.7
+      break
+    default:
+      stressValue = 1.1
+      break
+  }
+
+  // Calorie intake calculation
+  let calorieIntake = 0
+  switch (req.body.gender) {
+    case 'Laki-Laki':
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+    case 'Perempuan':
+      calorieIntake = femaleBMR * activityValue * stressValue
+      break
+    default:
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+  }
+
+  // Set user calorie intake based on weightGoal
+  switch (req.body.weightGoal) {
+    case 0:
+      calorieIntake = Math.round(calorieIntake * 0.6)
+      break
+    case 1:
+      calorieIntake = Math.round(calorieIntake * 0.8)
+      break
+    case 2:
+      calorieIntake = Math.round(calorieIntake)
+      break
+    case 3:
+      calorieIntake = Math.round(calorieIntake * 1.2)
+      break
+    case 4:
+      calorieIntake = Math.round(calorieIntake * 1.4)
+      break
+    default:
+      calorieIntake = Math.round(calorieIntake)
+      break
+  }
+
   const userData = {
     userId,
     email,
@@ -134,18 +274,28 @@ exports.addUserData = (req, res) => {
     birthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
-    userHeight: req.body.userHeight
+    userHeight: req.body.userHeight,
+    userCalorieIntake: calorieIntake
   }
 
-  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight) {
-    return res.status(400).json({ message: 'Required.' })
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
+    return res.status(400).json({
+      error: true,
+      message: 'Required.'
+    })
   }
 
   db.collection('users').add(userData)
     .then(() => {
-      return res.status(200).json({ message: 'Information saved successfully!' })
+      return res.status(200).json({
+        error: false,
+        message: 'Information saved successfully!'
+      })
     })
     .catch((e) => {
-      return res.status(500).json({ message: 'Error.' })
+      return res.status(500).json({
+        error: true,
+        message: e
+      })
     })
 }
