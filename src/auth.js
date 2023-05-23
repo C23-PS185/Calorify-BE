@@ -189,6 +189,10 @@ exports.addUserData = (req, res) => {
   const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
   const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
 
+  // BMI calculation
+  const heightInMeters = req.body.userHeight / 100
+  const BMI = req.body.userWeight / (heightInMeters ** 2)
+
   // Get activity value
   let activityValue = 0
 
@@ -275,7 +279,8 @@ exports.addUserData = (req, res) => {
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
-    userCalorieIntake: calorieIntake
+    userCalorieIntake: calorieIntake,
+    BMI
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
