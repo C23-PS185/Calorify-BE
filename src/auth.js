@@ -191,7 +191,7 @@ exports.addUserData = (req, res) => {
 
   // BMI calculation
   const heightInMeters = req.body.userHeight / 100
-  const BMI = req.body.userWeight / (heightInMeters ** 2)
+  const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
 
   // Get activity value
   let activityValue = 0
@@ -271,16 +271,16 @@ exports.addUserData = (req, res) => {
   }
 
   const userData = {
-    userId,
     email,
     createdAt,
     fullName: req.body.fullName,
-    birthDate,
+    birthDate: req.body.birthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
+    weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
-    BMI
+    userBMI
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
@@ -290,17 +290,47 @@ exports.addUserData = (req, res) => {
     })
   }
 
-  db.collection('users').add(userData)
-    .then(() => {
-      return res.status(200).json({
-        error: false,
-        message: 'Information saved successfully!'
-      })
-    })
-    .catch((e) => {
-      return res.status(500).json({
+  const docRef = db.collection('users').doc(userId)
+
+  docRef.get().then((doc) => {
+    if (doc.exists) {
+      return res.status(400).json({
         error: true,
-        message: e
+        message: 'User data already exist'
       })
+    }
+
+    docRef.set(userData)
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      })
+      .catch((e) => {
+        return res.status(500).json({
+          error: true,
+          message: e
+        })
+      })
+  })
+}
+
+exports.getUserData = async (req, res) => {
+  const userId = firebase.auth().currentUser.uid
+
+  const docRef = db.collection('users').doc(userId)
+  const doc = await docRef.get()
+
+  if (!doc.exists) {
+    return res.status(500).json({
+      error: true,
+      message: 'Data is not exists'
     })
+  }
+
+  return res.status(200).json({
+    error: false,
+    data: doc.data()
+  })
 }
