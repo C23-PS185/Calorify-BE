@@ -191,7 +191,7 @@ exports.addUserData = (req, res) => {
 
   // BMI calculation
   const heightInMeters = req.body.userHeight / 100
-  const BMI = req.body.userWeight / (heightInMeters ** 2)
+  const userBMI = req.body.userWeight / (heightInMeters ** 2)
 
   // Get activity value
   let activityValue = 0
@@ -279,8 +279,9 @@ exports.addUserData = (req, res) => {
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
+    weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
-    BMI
+    userBMI
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
@@ -296,6 +297,47 @@ exports.addUserData = (req, res) => {
         error: false,
         message: 'Information saved successfully!'
       })
+    })
+    .catch((e) => {
+      return res.status(500).json({
+        error: true,
+        message: e
+      })
+    })
+}
+
+exports.getSelfAsessmentResult = (req, res) => {
+  const userId = firebase.auth().currentUser.uid
+  const docRef = db.collection('users').doc(userId)
+
+  docRef
+    .get()
+    .then((doc) => {
+      if (doc.exists) {
+        const userData = doc.data()
+        const userWeight = userData.userWeight
+        const userHeight = userData.userHeight
+        const userBMI = userData.userBMI
+        const weightGoal = userData.weightGoal
+        const userCalorieIntake = userData.userCalorieIntake
+
+        return res.status(200).json({
+          error: false,
+          message: 'Success',
+          data: {
+            userWeight,
+            userHeight,
+            userBMI,
+            weightGoal,
+            userCalorieIntake
+          }
+        })
+      } else {
+        return res.status(404).json({
+          error: true,
+          message: 'User data not found'
+        })
+      }
     })
     .catch((e) => {
       return res.status(500).json({
