@@ -271,11 +271,10 @@ exports.addUserData = (req, res) => {
   }
 
   const userData = {
-    userId,
     email,
     createdAt,
     fullName: req.body.fullName,
-    birthDate,
+    birthDate: req.body.birthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
@@ -317,36 +316,21 @@ exports.addUserData = (req, res) => {
   })
 }
 
-exports.getSelfAsessmentResult = (req, res) => {
+exports.getUserData = async (req, res) => {
   const userId = firebase.auth().currentUser.uid
-  db.collection('users').where('userId', '==', userId).get()
-    .then((data) => {
-      // const selfAssessmentData = []
 
-      // data.forEach((doc) => {
-      //   selfAssessmentData.push({
-      //     userWeight: doc.data().userWeight,
-      //     userHeight: doc.data().userHeight,
-      //     userBMI: doc.data().userBMI,
-      //     weightGoal: doc.data().weightGoal,
-      //     userCalorieIntake: doc.data().userCalorieIntake
-      //   })
-      // })
-      console.log(data)
-      return res.status(200).json({
-        error: false,
-        data: {
-          userWeight: data.userWeight,
-          userHeight: data.userHeight,
-          userBMI: data.userBMI,
-          weightGoal: data.weightGoal,
-          userCalorieIntake: data.userCalorieIntake
-        }
-      })
-    }).catch((e) => {
-      return res.status(500).json({
-        error: true,
-        message: e
-      })
+  const docRef = db.collection('users').doc(userId)
+  const doc = await docRef.get()
+
+  if (!doc.exists) {
+    return res.status(500).json({
+      error: true,
+      message: 'Data is not exists'
     })
+  }
+
+  return res.status(200).json({
+    error: false,
+    data: doc.data()
+  })
 }
