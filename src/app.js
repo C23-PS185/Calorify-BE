@@ -13,9 +13,9 @@ app.use(cors())
 app.use('/api', authRoutes)
 
 // PORT
-const port = 3000
+const PORT = process.env.PORT || 3000
 
 // Starting a server
-app.listen(port, () => {
-  console.log(`app is running at ${port}`)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`app is running at ${PORT}`)
 })
