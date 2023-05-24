@@ -191,7 +191,7 @@ exports.addUserData = (req, res) => {
 
   // BMI calculation
   const heightInMeters = req.body.userHeight / 100
-  const userBMI = req.body.userWeight / (heightInMeters ** 2)
+  const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
 
   // Get activity value
   let activityValue = 0
@@ -308,38 +308,24 @@ exports.addUserData = (req, res) => {
 
 exports.getSelfAsessmentResult = (req, res) => {
   const userId = firebase.auth().currentUser.uid
-  const docRef = db.collection('users').doc(userId)
+  db.collection('users').where('userId', '==', userId).get()
+    .then((data) => {
+      const selfAssessmentData = []
 
-  docRef
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        const userData = doc.data()
-        const userWeight = userData.userWeight
-        const userHeight = userData.userHeight
-        const userBMI = userData.userBMI
-        const weightGoal = userData.weightGoal
-        const userCalorieIntake = userData.userCalorieIntake
-
-        return res.status(200).json({
-          error: false,
-          message: 'Success',
-          data: {
-            userWeight,
-            userHeight,
-            userBMI,
-            weightGoal,
-            userCalorieIntake
-          }
+      data.forEach((doc) => {
+        selfAssessmentData.push({
+          userWeight: doc.data().userWeight,
+          userHeight: doc.data().userHeight,
+          userBMI: doc.data().userBMI,
+          weightGoal: doc.data().weightGoal,
+          userCalorieIntake: doc.data().userCalorieIntake
         })
-      } else {
-        return res.status(404).json({
-          error: true,
-          message: 'User data not found'
-        })
-      }
-    })
-    .catch((e) => {
+      })
+      return res.status(200).json({
+        error: false,
+        data: selfAssessmentData
+      })
+    }).catch((e) => {
       return res.status(500).json({
         error: true,
         message: e
