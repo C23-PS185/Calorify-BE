@@ -291,39 +291,57 @@ exports.addUserData = (req, res) => {
     })
   }
 
-  db.collection('users').add(userData)
-    .then(() => {
-      return res.status(200).json({
-        error: false,
-        message: 'Information saved successfully!'
-      })
-    })
-    .catch((e) => {
-      return res.status(500).json({
+  const docRef = db.collection('users').doc(userId)
+
+  docRef.get().then((doc) => {
+    if (doc.exists) {
+      return res.status(400).json({
         error: true,
-        message: e
+        message: 'User data already exist'
       })
-    })
+    }
+
+    docRef.set(userData)
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      })
+      .catch((e) => {
+        return res.status(500).json({
+          error: true,
+          message: e
+        })
+      })
+  })
 }
 
 exports.getSelfAsessmentResult = (req, res) => {
   const userId = firebase.auth().currentUser.uid
   db.collection('users').where('userId', '==', userId).get()
     .then((data) => {
-      const selfAssessmentData = []
+      // const selfAssessmentData = []
 
-      data.forEach((doc) => {
-        selfAssessmentData.push({
-          userWeight: doc.data().userWeight,
-          userHeight: doc.data().userHeight,
-          userBMI: doc.data().userBMI,
-          weightGoal: doc.data().weightGoal,
-          userCalorieIntake: doc.data().userCalorieIntake
-        })
-      })
+      // data.forEach((doc) => {
+      //   selfAssessmentData.push({
+      //     userWeight: doc.data().userWeight,
+      //     userHeight: doc.data().userHeight,
+      //     userBMI: doc.data().userBMI,
+      //     weightGoal: doc.data().weightGoal,
+      //     userCalorieIntake: doc.data().userCalorieIntake
+      //   })
+      // })
+      console.log(data)
       return res.status(200).json({
         error: false,
-        data: selfAssessmentData
+        data: {
+          userWeight: data.userWeight,
+          userHeight: data.userHeight,
+          userBMI: data.userBMI,
+          weightGoal: data.weightGoal,
+          userCalorieIntake: data.userCalorieIntake
+        }
       })
     }).catch((e) => {
       return res.status(500).json({
