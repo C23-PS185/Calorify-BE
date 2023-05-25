@@ -174,6 +174,12 @@ exports.forgetPassword = (req, res) => {
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
   const birthDate = new Date(req.body.birthDate)
+  const day = birthDate.getDate()
+  const month = birthDate.getMonth() + 1
+  const year = birthDate.getFullYear()
+
+  const formattedDate = `${day}-${month}-${year}`
+
   const userId = firebase.auth().currentUser.uid
   const email = firebase.auth().currentUser.email
 
@@ -274,7 +280,7 @@ exports.addUserData = (req, res) => {
     email,
     createdAt,
     fullName: req.body.fullName,
-    birthDate: req.body.birthDate,
+    birthDate: formattedDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
