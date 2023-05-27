@@ -3,8 +3,7 @@ steps:
   args: ['app', 'deploy']
   timeout: 600s
   dir: './'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
-  build:
-    logs_bucket: calorify-app_cloudbuild
+  options:
+    logging: CLOUD_LOGGING_ONLY
+    build:
+      logs_bucket: calorify-app_cloudbuild
