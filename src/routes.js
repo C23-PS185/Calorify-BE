@@ -21,7 +21,7 @@ router.post('/logout', logout)
 
 router.post('/add-user-data', addUserData)
 
-router.get('/user-data', getUserData)
+router.get('/user-data/:userId', getUserData)
 
 router.post('/verifyemail', verifyEmail)
 

@@ -180,8 +180,7 @@ exports.addUserData = (req, res) => {
 
   const formattedDate = `${day}-${month}-${year}`
 
-  const userId = firebase.auth().currentUser.uid
-  const email = firebase.auth().currentUser.email
+  const userId = req.body.userId
 
   // Get user age
   const today = new Date()
@@ -277,7 +276,6 @@ exports.addUserData = (req, res) => {
   }
 
   const userData = {
-    email,
     createdAt,
     fullName: req.body.fullName,
     birthDate: formattedDate,
@@ -323,7 +321,7 @@ exports.addUserData = (req, res) => {
 }
 
 exports.getUserData = async (req, res) => {
-  const userId = firebase.auth().currentUser.uid
+  const { userId } = req.params
 
   const docRef = db.collection('users').doc(userId)
   const doc = await docRef.get()
