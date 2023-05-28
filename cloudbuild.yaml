@@ -1,9 +1,7 @@
 steps:
-- name: 'gcr.io/cloud-builders/gsutil'
-  args:
-  - 'cp'
-  - 'gs://calorify-bucket/.env'
-  - '${_WORKING_DIR}/.env'
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['cp', 'gs://calorify-bucket/.env', './.env']
+
 
 - name: 'gcr.io/cloud-builders/gcloud'
   args:
