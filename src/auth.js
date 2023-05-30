@@ -357,6 +357,7 @@ exports.addCalorieLog = (req, res) => {
       case 0:
         calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
           totalCalories: req.body.totalCalories,
           createdAt
         })
@@ -364,6 +365,7 @@ exports.addCalorieLog = (req, res) => {
       case 1:
         calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
           totalCalories: req.body.totalCalories,
           createdAt
         })
@@ -371,6 +373,7 @@ exports.addCalorieLog = (req, res) => {
       case 2:
         calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
           totalCalories: req.body.totalCalories,
           createdAt
         })
@@ -378,6 +381,7 @@ exports.addCalorieLog = (req, res) => {
       default:
         calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
           totalCalories: req.body.totalCalories,
           createdAt
         })
@@ -385,7 +389,7 @@ exports.addCalorieLog = (req, res) => {
     }
 
     const todayCalorieLog = todayCollection.doc('foodCollection')
-    if (!req.body.foodName || !req.body.totalCalories || req.body.mealTime === undefined) {
+    if (!req.body.foodName || !req.body.totalCalories || !req.body.fnbType || req.body.mealTime === undefined) {
       return res.status(400).json({
         error: true,
         message: 'Required.'
@@ -405,5 +409,33 @@ exports.addCalorieLog = (req, res) => {
           message: e
         })
       })
+  })
+}
+
+// Get Daily Calorie Log
+exports.getDailyCalorieLog = async (req, res) => {
+  const { userId } = req.params
+  const date = new Date()
+  const day = date.getDate()
+  const month = date.getMonth() + 1
+  const year = date.getFullYear()
+
+  const formattedDate = `${day}-${month}-${year}`
+
+  const docRef = db.collection('calorie-log').doc(userId)
+  const todayCollection = docRef.collection(formattedDate).doc('foodCollection')
+
+  const doc = await todayCollection.get()
+
+  if (!doc.exists) {
+    return res.status(500).json({
+      error: true,
+      message: 'Data is not exists'
+    })
+  }
+
+  return res.status(200).json({
+    error: false,
+    data: doc.data()
   })
 }

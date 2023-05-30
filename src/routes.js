@@ -9,7 +9,8 @@ const {
   addUserData,
   verifyEmail,
   getUserData,
-  addCalorieLog
+  addCalorieLog,
+  getDailyCalorieLog
 } = require('./auth')
 
 router.post('/register', register)
@@ -26,6 +27,8 @@ router.post('/add-user-data', addUserData)
 
 router.get('/user-data/:userId', getUserData)
 
-router.post('/add-calorielog/:userId', addCalorieLog)
+router.post('/daily-calorielog/:userId', addCalorieLog)
+
+router.get('/daily-calorielog/:userId', getDailyCalorieLog)
 
 module.exports = router
