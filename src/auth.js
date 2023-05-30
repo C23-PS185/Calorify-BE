@@ -338,3 +338,5 @@ exports.getUserData = async (req, res) => {
     data: doc.data()
   })
 }
+
+// Add calorie log to the database
