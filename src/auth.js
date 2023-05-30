@@ -174,16 +174,14 @@ exports.forgetPassword = (req, res) => {
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
 
-  
+  const birthDateParts = req.body.birthDate.split('-')
 
-  const birthDateParts = req.body.birthDate.split('-');
+  const day = birthDateParts[0].padStart(2, '0')
+  const month = birthDateParts[1].padStart(2, '0')
+  const year = birthDateParts[2]
 
-  const day = birthDateParts[0].padStart(2, '0');
-  const month = birthDateParts[1].padStart(2, '0');
-  const year = birthDateParts[2];
-
-  const birthDate = new Date(`${month}-${day}-${year}`);
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`;
+  const birthDate = new Date(`${month}-${day}-${year}`)
+  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
 
   const userId = req.body.userId
 
@@ -292,7 +290,7 @@ exports.addUserData = (req, res) => {
     userBMI
   }
 
-  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
     return res.status(400).json({
       error: true,
       message: 'Required.'
@@ -301,28 +299,19 @@ exports.addUserData = (req, res) => {
 
   const docRef = db.collection('users').doc(userId)
 
-  docRef.get().then((doc) => {
-    if (doc.exists) {
-      return res.status(400).json({
+  docRef.set(userData)
+    .then(() => {
+      return res.status(200).json({
+        error: false,
+        message: 'Information saved successfully!'
+      })
+    })
+    .catch((e) => {
+      return res.status(500).json({
         error: true,
-        message: 'User data already exist'
+        message: e
       })
-    }
-
-    docRef.set(userData)
-      .then(() => {
-        return res.status(200).json({
-          error: false,
-          message: 'Information saved successfully!'
-        })
-      })
-      .catch((e) => {
-        return res.status(500).json({
-          error: true,
-          message: e
-        })
-      })
-  })
+    })
 }
 
 exports.getUserData = async (req, res) => {
