@@ -173,12 +173,15 @@ exports.forgetPassword = (req, res) => {
 // User Information
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
-  const birthDate = new Date(req.body.birthDate)
-  const day = birthDate.getDate()
-  const month = birthDate.getMonth() + 1
-  const year = birthDate.getFullYear()
 
-  const formattedDate = `${day}-${month}-${year}`
+  const birthDateParts = req.body.birthDate.split('-')
+
+  const day = birthDateParts[0].padStart(2, '0')
+  const month = birthDateParts[1].padStart(2, '0')
+  const year = birthDateParts[2]
+
+  const birthDate = new Date(`${month}-${day}-${year}`)
+  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
 
   const userId = req.body.userId
 
@@ -278,7 +281,7 @@ exports.addUserData = (req, res) => {
   const userData = {
     createdAt,
     fullName: req.body.fullName,
-    birthDate: formattedDate,
+    birthDate: formattedBirthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
@@ -287,7 +290,7 @@ exports.addUserData = (req, res) => {
     userBMI
   }
 
-  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel < 0 || req.body.stressLevel < 0 || req.body.weightGoal < 0) {
+  if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
     return res.status(400).json({
       error: true,
       message: 'Required.'
@@ -296,14 +299,7 @@ exports.addUserData = (req, res) => {
 
   const docRef = db.collection('users').doc(userId)
 
-  docRef.get().then((doc) => {
-    if (doc.exists) {
-      return res.status(400).json({
-        error: true,
-        message: 'User data already exist'
-      })
-    }
-
+  docRef.get().then(() => {
     docRef.set(userData)
       .then(() => {
         return res.status(200).json({
@@ -340,3 +336,81 @@ exports.getUserData = async (req, res) => {
 }
 
 // Add calorie log to the database
+exports.addCalorieLog = (req, res) => {
+  const date = new Date()
+  const time = date.getHours() + ':' + date.getMinutes()
+  const day = date.getDate()
+  const month = date.getMonth() + 1
+  const year = date.getFullYear()
+
+  const formattedDate = `${day}-${month}-${year}`
+  const createdAt = formattedDate.toString() + ', ' + time
+  const { userId } = req.params
+
+  const docRef = db.collection('calorie-log').doc(userId)
+  const todayCollection = docRef.collection(formattedDate)
+
+  docRef.get().then((doc) => {
+    if (doc.exists) {
+      return res.status(400).json({
+        error: true,
+        message: 'User data already exist'
+      })
+    }
+
+    const calorieLogData = {}
+
+    switch (req.body.mealTime) {
+      case 0:
+        calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          totalCalories: req.body.totalCalories,
+          createdAt
+        })
+        break
+      case 1:
+        calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          totalCalories: req.body.totalCalories,
+          createdAt
+        })
+        break
+      case 2:
+        calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          totalCalories: req.body.totalCalories,
+          createdAt
+        })
+        break
+      default:
+        calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          totalCalories: req.body.totalCalories,
+          createdAt
+        })
+        break
+    }
+
+    const todayCalorieLog = todayCollection.doc('foodCollection')
+    if (!req.body.foodName || !req.body.totalCalories || req.body.mealTime === undefined) {
+      return res.status(400).json({
+        error: true,
+        message: 'Required.'
+      })
+    }
+
+    todayCalorieLog.set(calorieLogData, { merge: true })
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      })
+      .catch((e) => {
+        return res.status(500).json({
+          error: true,
+          message: e
+        })
+      })
+  })
+}

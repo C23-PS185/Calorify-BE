@@ -26,6 +26,6 @@ router.post('/add-user-data', addUserData)
 
 router.get('/user-data/:userId', getUserData)
 
-router.post('/add-calorielog', addCalorieLog)
+router.post('/add-calorielog/:userId', addCalorieLog)
 
 module.exports = router
