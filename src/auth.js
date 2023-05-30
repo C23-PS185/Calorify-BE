@@ -351,13 +351,6 @@ exports.addCalorieLog = (req, res) => {
   const todayCollection = docRef.collection(formattedDate)
 
   docRef.get().then((doc) => {
-    if (doc.exists) {
-      return res.status(400).json({
-        error: true,
-        message: 'User data already exist'
-      })
-    }
-
     const calorieLogData = {}
 
     switch (req.body.mealTime) {
