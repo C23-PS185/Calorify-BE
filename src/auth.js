@@ -173,12 +173,17 @@ exports.forgetPassword = (req, res) => {
 // User Information
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
-  const birthDate = new Date(req.body.birthDate)
-  const day = birthDate.getDate()
-  const month = birthDate.getMonth() + 1
-  const year = birthDate.getFullYear()
 
-  const formattedDate = `${day}-${month}-${year}`
+  
+
+  const birthDateParts = req.body.birthDate.split('-');
+
+  const day = birthDateParts[0].padStart(2, '0');
+  const month = birthDateParts[1].padStart(2, '0');
+  const year = birthDateParts[2];
+
+  const birthDate = new Date(`${month}-${day}-${year}`);
+  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`;
 
   const userId = req.body.userId
 
@@ -278,7 +283,7 @@ exports.addUserData = (req, res) => {
   const userData = {
     createdAt,
     fullName: req.body.fullName,
-    birthDate: formattedDate,
+    birthDate: formattedBirthDate,
     gender: req.body.gender,
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
