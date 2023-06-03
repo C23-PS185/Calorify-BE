@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
 const db = firebase.firestore()
 
@@ -337,18 +338,22 @@ exports.getUserData = async (req, res) => {
 
 // Add calorie log to the database
 exports.addCalorieLog = (req, res) => {
-  const date = new Date()
-  const time = date.getHours() + ':' + date.getMinutes()
-  const day = date.getDate()
-  const month = date.getMonth() + 1
-  const year = date.getFullYear()
+  const today = new Date()
 
-  const formattedDate = `${day}-${month}-${year}`
-  const createdAt = formattedDate.toString() + ', ' + time
+  function padTo2Digits (num) {
+    return num.toString().padStart(2, '0')
+  }
+
+  const year = today.getFullYear()
+  const month = padTo2Digits(today.getMonth() + 1)
+  const date = padTo2Digits(today.getDate())
+
+  const createdAt = `${date}-${month}-${year}`
+
   const { userId } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const todayCollection = docRef.collection(formattedDate)
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
 
   docRef.get().then((doc) => {
     const calorieLogData = {}
@@ -358,7 +363,7 @@ exports.addCalorieLog = (req, res) => {
         calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
           fnbType: req.body.fnbType,
-          totalCalories: req.body.totalCalories,
+          foodCalories: req.body.foodCalories,
           createdAt
         })
         break
@@ -366,7 +371,7 @@ exports.addCalorieLog = (req, res) => {
         calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
           fnbType: req.body.fnbType,
-          totalCalories: req.body.totalCalories,
+          foodCalories: req.body.foodCalories,
           createdAt
         })
         break
@@ -374,7 +379,7 @@ exports.addCalorieLog = (req, res) => {
         calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
           fnbType: req.body.fnbType,
-          totalCalories: req.body.totalCalories,
+          foodCalories: req.body.foodCalories,
           createdAt
         })
         break
@@ -382,21 +387,22 @@ exports.addCalorieLog = (req, res) => {
         calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
           fnbType: req.body.fnbType,
-          totalCalories: req.body.totalCalories,
+          foodCalories: req.body.foodCalories,
           createdAt
         })
         break
     }
 
-    const todayCalorieLog = todayCollection.doc('foodCollection')
-    if (!req.body.foodName || !req.body.totalCalories || !req.body.fnbType || req.body.mealTime === undefined) {
+    const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
+
+    if (!req.body.foodName || !req.body.foodCalories || !req.body.fnbType || req.body.mealTime === undefined) {
       return res.status(400).json({
         error: true,
         message: 'Required.'
       })
     }
 
-    todayCalorieLog.set(calorieLogData, { merge: true })
+    logCollection.set(calorieLogData, { merge: true })
       .then(() => {
         return res.status(200).json({
           error: false,
@@ -414,28 +420,46 @@ exports.addCalorieLog = (req, res) => {
 
 // Get Daily Calorie Log
 exports.getDailyCalorieLog = async (req, res) => {
-  const { userId } = req.params
-  const date = new Date()
-  const day = date.getDate()
-  const month = date.getMonth() + 1
-  const year = date.getFullYear()
-
-  const formattedDate = `${day}-${month}-${year}`
+  const { userId, date, month, year } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const todayCollection = docRef.collection(formattedDate).doc('foodCollection')
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
 
-  const doc = await todayCollection.get()
-
+  const doc = await logCollection.get()
   if (!doc.exists) {
     return res.status(500).json({
       error: true,
       message: 'Data is not exists'
     })
   }
-
   return res.status(200).json({
     error: false,
     data: doc.data()
   })
+}
+
+exports.getMonthlyCalorieLog = async (req, res) => {
+  const { userId, month, year } = req.params
+
+  const docRef = db.collection('calorie-log').doc(userId)
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+  const logCollection = yearCollection.collection(`${month}`)
+  try {
+    const querySnapshot = await logCollection.get()
+    const monthlyLog = []
+
+    querySnapshot.forEach((doc) => {
+      monthlyLog.push({
+        id: doc.id,
+        data: doc.data()
+      })
+    })
+    return res.status(200).json(monthlyLog)
+  } catch (e) {
+    return res.status(500).json({
+      error: true,
+      message: 'data is not exist'
+    })
+  }
 }
