@@ -383,7 +383,7 @@ exports.addCalorieLog = (req, res) => {
           createdAt
         })
         break
-      default:
+      case 3:
         calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
           foodName: req.body.foodName,
           fnbType: req.body.fnbType,
@@ -391,6 +391,13 @@ exports.addCalorieLog = (req, res) => {
           createdAt
         })
         break
+      default:
+        calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
     }
 
     const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
