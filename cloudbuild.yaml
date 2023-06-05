@@ -1,8 +1,14 @@
 steps:
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['cp', 'gs://calorify-bucket/.env', './.env']
+
+
 - name: 'gcr.io/cloud-builders/gcloud'
-  args: ['app', 'deploy']
-  timeout: 600s
+  args:
+  - 'app'
+  - 'deploy'
+  timeout: '600s'
   dir: './'
 
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: 'CLOUD_LOGGING_ONLY'
