@@ -1,3 +1,4 @@
+/* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
 const db = firebase.firestore()
 
@@ -299,19 +300,21 @@ exports.addUserData = (req, res) => {
 
   const docRef = db.collection('users').doc(userId)
 
-  docRef.set(userData)
-    .then(() => {
-      return res.status(200).json({
-        error: false,
-        message: 'Information saved successfully!'
+  docRef.get().then(() => {
+    docRef.set(userData)
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
       })
-    })
-    .catch((e) => {
-      return res.status(500).json({
-        error: true,
-        message: e
+      .catch((e) => {
+        return res.status(500).json({
+          error: true,
+          message: e
+        })
       })
-    })
+  })
 }
 
 exports.getUserData = async (req, res) => {
@@ -331,4 +334,160 @@ exports.getUserData = async (req, res) => {
     error: false,
     data: doc.data()
   })
+}
+
+// Add calorie log to the database
+exports.addCalorieLog = (req, res) => {
+  const today = new Date()
+
+  function padTo2Digits (num) {
+    return num.toString().padStart(2, '0')
+  }
+
+  const year = today.getFullYear()
+  const month = padTo2Digits(today.getMonth() + 1)
+  const date = padTo2Digits(today.getDate())
+
+  const createdAt = `${date}-${month}-${year}`
+
+  const { userId } = req.params
+
+  const docRef = db.collection('calorie-log').doc(userId)
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+
+  docRef.get().then((doc) => {
+    const calorieLogData = {}
+
+    switch (req.body.mealTime) {
+      case 0:
+        calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
+        break
+      case 1:
+        calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
+        break
+      case 2:
+        calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
+        break
+      case 3:
+        calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
+        break
+      default:
+        calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+          foodName: req.body.foodName,
+          fnbType: req.body.fnbType,
+          foodCalories: req.body.foodCalories,
+          createdAt
+        })
+    }
+
+    const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
+
+    if (!req.body.foodName || !req.body.foodCalories || !req.body.fnbType || req.body.mealTime === undefined) {
+      return res.status(400).json({
+        error: true,
+        message: 'Required.'
+      })
+    }
+
+    logCollection.set(calorieLogData, { merge: true })
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      })
+      .catch((e) => {
+        return res.status(500).json({
+          error: true,
+          message: e
+        })
+      })
+  })
+}
+
+// Get Daily Calorie Log
+exports.getDailyCalorieLog = async (req, res) => {
+  const { userId, date, month, year } = req.params;
+
+  const docRef = db.collection('calorie-log').doc(userId);
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`);
+  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`);
+
+  const doc = await logCollection.get();
+  if (!doc.exists) {
+    return res.status(500).json({
+      error: true,
+      message: 'Data does not exist'
+    });
+  }
+
+  const data = doc.data();
+  let totalCalories = 0;
+
+  for (const meal in data) {
+    if (data.hasOwnProperty(meal)) {
+      const mealItems = data[meal];
+      if (Array.isArray(mealItems)) {
+        mealItems.forEach(food => {
+          if (food.foodCalories) {
+            totalCalories += food.foodCalories;
+          }
+        });
+      }
+    }
+  }
+
+  return res.status(200).json({
+    error: false,
+    data: {
+      ...data,
+      totalCalories
+    }
+  });
+};
+
+// Get Monthly Calorie Log
+exports.getMonthlyCalorieLog = async (req, res) => {
+  const { userId, month, year } = req.params
+
+  const docRef = db.collection('calorie-log').doc(userId)
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+  const logCollection = yearCollection.collection(`${month}`)
+  try {
+    const querySnapshot = await logCollection.get()
+    const monthlyLog = []
+
+    querySnapshot.forEach((doc) => {
+      monthlyLog.push({
+        id: doc.id,
+        data: doc.data()
+      })
+    })
+    return res.status(200).json(monthlyLog)
+  } catch (e) {
+    return res.status(500).json({
+      error: true,
+      message: 'data is not exist'
+    })
+  }
 }
