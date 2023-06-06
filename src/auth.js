@@ -435,24 +435,44 @@ exports.addCalorieLog = (req, res) => {
 
 // Get Daily Calorie Log
 exports.getDailyCalorieLog = async (req, res) => {
-  const { userId, date, month, year } = req.params
+  const { userId, date, month, year } = req.params;
 
-  const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
+  const docRef = db.collection('calorie-log').doc(userId);
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`);
+  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`);
 
-  const doc = await logCollection.get()
+  const doc = await logCollection.get();
   if (!doc.exists) {
     return res.status(500).json({
       error: true,
-      message: 'Data is not exists'
-    })
+      message: 'Data does not exist'
+    });
   }
+
+  const data = doc.data();
+  let totalCalories = 0;
+
+  for (const meal in data) {
+    if (data.hasOwnProperty(meal)) {
+      const mealItems = data[meal];
+      if (Array.isArray(mealItems)) {
+        mealItems.forEach(food => {
+          if (food.foodCalories) {
+            totalCalories += food.foodCalories;
+          }
+        });
+      }
+    }
+  }
+
   return res.status(200).json({
     error: false,
-    data: doc.data()
-  })
-}
+    data: {
+      ...data,
+      totalCalories
+    }
+  });
+};
 
 // Get Monthly Calorie Log
 exports.getMonthlyCalorieLog = async (req, res) => {
