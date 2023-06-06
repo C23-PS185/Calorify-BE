@@ -411,9 +411,17 @@ exports.addCalorieLog = (req, res) => {
 
     logCollection.set(calorieLogData, { merge: true })
       .then(() => {
+        let totalCalories = 0
+        Object.values(calorieLogData).forEach((meal) => {
+          meal.forEach((food) => {
+            totalCalories += food.foodCalories
+          })
+        })
+        console.log(totalCalories)
         return res.status(200).json({
           error: false,
-          message: 'Information saved successfully!'
+          message: 'Information saved successfully!',
+          totalCalories
         })
       })
       .catch((e) => {
@@ -446,6 +454,7 @@ exports.getDailyCalorieLog = async (req, res) => {
   })
 }
 
+// Get Monthly Calorie Log
 exports.getMonthlyCalorieLog = async (req, res) => {
   const { userId, month, year } = req.params
 
@@ -469,4 +478,46 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       message: 'data is not exist'
     })
   }
+}
+
+// Get Food Data
+exports.getFoodData = async (req, res) => {
+  const { foodName } = req.params
+
+  const docRef = db.collection('food-calories').doc(foodName)
+  try {
+    const doc = await docRef.get()
+    if (!doc.exists) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist'
+      })
+    }
+    return res.status(200).json({
+      error: false,
+      data: doc.data()
+    })
+  } catch (e) {
+    return res.status(500).json({
+      error: true,
+      message: 'Server error'
+    })
+  }
+}
+
+// Get All Foods Data
+exports.getAllFoodsData = async (req, res) => {
+  const foods = []
+  const foodsRef = db.collection('food-calories')
+  const snapshot = await foodsRef.get()
+  snapshot.forEach(doc => {
+    foods.push({
+      name: doc.id,
+      data: doc.data()
+    })
+  })
+  return res.status(200).json({
+    error: false,
+    data: foods
+  })
 }
