@@ -11,7 +11,9 @@ const {
   getUserData,
   addCalorieLog,
   getDailyCalorieLog,
-  getMonthlyCalorieLog
+  getMonthlyCalorieLog,
+  getAllFoodsData,
+  getFoodData
 } = require('./auth')
 
 router.post('/register', register)
@@ -33,5 +35,9 @@ router.post('/calorielog/:userId', addCalorieLog)
 router.get('/daily-calorielog/:userId/:date-:month-:year', getDailyCalorieLog)
 
 router.get('/monthly-calorielog/:userId/:month-:year', getMonthlyCalorieLog)
+
+router.get('/foods', getAllFoodsData)
+
+router.get('/foods/:foodName', getFoodData)
 
 module.exports = router

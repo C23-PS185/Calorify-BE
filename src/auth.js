@@ -427,32 +427,32 @@ exports.addCalorieLog = (req, res) => {
 
 // Get Daily Calorie Log
 exports.getDailyCalorieLog = async (req, res) => {
-  const { userId, date, month, year } = req.params;
+  const { userId, date, month, year } = req.params
 
-  const docRef = db.collection('calorie-log').doc(userId);
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`);
-  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`);
+  const docRef = db.collection('calorie-log').doc(userId)
+  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
 
-  const doc = await logCollection.get();
+  const doc = await logCollection.get()
   if (!doc.exists) {
     return res.status(500).json({
       error: true,
       message: 'Data does not exist'
-    });
+    })
   }
 
-  const data = doc.data();
-  let totalCalories = 0;
+  const data = doc.data()
+  let totalCalories = 0
 
   for (const meal in data) {
     if (data.hasOwnProperty(meal)) {
-      const mealItems = data[meal];
+      const mealItems = data[meal]
       if (Array.isArray(mealItems)) {
         mealItems.forEach(food => {
           if (food.foodCalories) {
-            totalCalories += food.foodCalories;
+            totalCalories += food.foodCalories
           }
-        });
+        })
       }
     }
   }
@@ -463,8 +463,8 @@ exports.getDailyCalorieLog = async (req, res) => {
       ...data,
       totalCalories
     }
-  });
-};
+  })
+}
 
 // Get Monthly Calorie Log
 exports.getMonthlyCalorieLog = async (req, res) => {
@@ -490,4 +490,44 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       message: 'data is not exist'
     })
   }
+}
+
+exports.getFoodData = async (req, res) => {
+  const { foodName } = req.params
+
+  const docRef = db.collection('food-calories').doc(foodName)
+  try {
+    const doc = await docRef.get()
+    if (!doc.exists) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist'
+      })
+    }
+    return res.status(200).json({
+      error: false,
+      data: doc.data()
+    })
+  } catch (e) {
+    return res.status(500).json({
+      error: true,
+      message: 'Server error'
+    })
+  }
+}
+
+exports.getAllFoodsData = async (req, res) => {
+  const foods = []
+  const foodsRef = db.collection('food-calories')
+  const snapshot = await foodsRef.get()
+  snapshot.forEach(doc => {
+    foods.push({
+      name: doc.id,
+      data: doc.data()
+    })
+  })
+  return res.status(200).json({
+    error: false,
+    data: foods
+  })
 }
