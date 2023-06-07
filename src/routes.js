@@ -7,6 +7,7 @@ const {
   forgetPassword,
   logout,
   addUserData,
+  editPassword,
   verifyEmail,
   getUserData,
   editUserData,
@@ -27,6 +28,8 @@ router.post('/login', login)
 router.post('/forget-password', forgetPassword)
 
 router.post('/logout', logout)
+
+router.post('/edit-password', editPassword)
 
 router.post('/user-data', addUserData)
 
