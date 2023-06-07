@@ -9,6 +9,7 @@ const {
   addUserData,
   verifyEmail,
   getUserData,
+  editUserData,
   addCalorieLog,
   getDailyCalorieLog,
   getMonthlyCalorieLog,
@@ -26,7 +27,9 @@ router.post('/forget-password', forgetPassword)
 
 router.post('/logout', logout)
 
-router.post('/add-user-data', addUserData)
+router.post('/user-data', addUserData)
+
+router.post('/user-data/:userId', editUserData)
 
 router.get('/user-data/:userId', getUserData)
 
