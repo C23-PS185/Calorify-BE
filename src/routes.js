@@ -29,7 +29,10 @@ router.post('/logout', logout)
 
 router.post('/user-data', addUserData)
 
-router.post('/user-data/:userId', editUserData)
+const multer = require('multer');
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+router.put('/user-data/:userId', upload.single('image'),editUserData)
 
 router.get('/user-data/:userId', getUserData)
 

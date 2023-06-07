@@ -1,5 +1,6 @@
 /* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
+const admin = require('../config/firebase-admin.js')
 const db = firebase.firestore()
 
 // register
@@ -288,7 +289,8 @@ exports.addUserData = (req, res) => {
     userHeight: req.body.userHeight,
     weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
-    userBMI
+    userBMI,
+    photoURL: null
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
@@ -568,40 +570,105 @@ exports.getAllFoodsData = async (req, res) => {
   })
 }
 
-// Edit User Data
-
 exports.editUserData = async (req, res) => {
-  const { userId } = req.params
-  const updatedAt = new Date().toISOString
+  const { userId } = req.params;
+  const updatedAt = new Date().toISOString();
 
-  const birthDateParts = req.body.birthDate.split('-')
+  const birthDateParts = req.body.birthDate.split('-');
+  const day = birthDateParts[0].padStart(2, '0');
+  const month = birthDateParts[1].padStart(2, '0');
+  const year = birthDateParts[2];
+  const birthDate = new Date(`${month}-${day}-${year}`);
+  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`;
 
-  const day = birthDateParts[0].padStart(2, '0')
-  const month = birthDateParts[1].padStart(2, '0')
-  const year = birthDateParts[2]
+  const file = req.file;
+  const profileUpdateData = {
+    fullName: req.body.fullName,
+    gender: req.body.gender,
+    birthDate: formattedBirthDate
+  };
 
-  const birthDate = new Date(`${month}-${day}-${year}`)
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
   try {
-    await db.collection('users').doc(userId).update({
-      fullName: req.body.fullName,
-      gender: req.body.gender,
-      birthDate: formattedBirthDate
-    })
-    return res.status(200).json({
-      error: false,
-      message: 'User data updated successfully',
-      data: {
-        fullName: req.body.fullName,
-        gender: req.body.gender,
-        birthDate: formattedBirthDate,
-        updatedAt
+    // Create a reference to the Firebase Storage bucket
+    const bucket = admin.storage().bucket();
+
+    // Check if a file is provided for profile photo update
+    if (file) {
+      // Extract the original file extension
+      const originalExtension = file.originalname.split('.').pop();
+
+      // Generate a unique filename with the original file extension
+      const filename = `${userId}.${originalExtension}`;
+
+      // Upload the file to Firebase Storage
+      const fileRef = bucket.file(`profile/${filename}`);
+      const uploadStream = fileRef.createWriteStream();
+
+      uploadStream.on('error', (error) => {
+        return res.status(500).json({
+          error: true,
+          message: 'An error occurred while uploading the file.'
+        });
+      });
+
+      uploadStream.on('finish', async () => {
+        // File uploaded successfully
+
+        // Generate the dynamic link for the uploaded image
+        const config = {
+          action: 'read',
+          expires: '03-01-2500' // Replace with the desired expiration date for the link
+        };
+
+        const [url] = await fileRef.getSignedUrl(config);
+
+        // Update the user document in the 'users' collection with the photoURL
+        profileUpdateData.photoURL = url;
+
+        // Update the user data in the 'users' collection
+        try {
+          await db.collection('users').doc(userId).update(profileUpdateData);
+          return res.status(200).json({
+            error: false,
+            message: 'User data and photo profile updated successfully.',
+            data: {
+              ...profileUpdateData,
+              updatedAt
+            }
+          });
+        } catch (error) {
+          return res.status(500).json({
+            error: true,
+            message: 'An error occurred while updating the user data and photo profile.'
+          });
+        }
+      });
+
+      uploadStream.end(file.buffer);
+    } else {
+      // No file provided for profile photo update
+      // Update only the user data in the 'users' collection
+      try {
+        await db.collection('users').doc(userId).update(profileUpdateData);
+        return res.status(200).json({
+          error: false,
+          message: 'User data updated successfully.',
+          data: {
+            ...profileUpdateData,
+            updatedAt
+          }
+        });
+      } catch (error) {
+        return res.status(500).json({
+          error: true,
+          message: 'An error occurred while updating the user data.'
+        });
       }
-    })
-  } catch (e) {
+    }
+  } catch (error) {
     return res.status(500).json({
       error: true,
-      message: 'Server error'
-    })
+      message: 'An error occurred while uploading the file.'
+    });
   }
-}
+};
