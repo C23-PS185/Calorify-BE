@@ -172,6 +172,73 @@ exports.forgetPassword = (req, res) => {
     })
 }
 
+// edit password
+exports.editPassword = (req, res) => {
+  const user = firebase.auth().currentUser;
+
+  if (!user) {
+    return res.status(401).json({
+      error: true,
+      message: 'User not authenticated'
+    });
+  }
+
+  if (!req.body.password) {
+    return res.status(422).json({
+      error: true,
+      message: 'Password is required'
+    });
+  }
+
+  if (req.body.passwordConfirmation !== req.body.password) {
+    return res.status(400).json({
+      error: true,
+      message: 'Passwords do not match'
+    });
+  }
+
+
+  firebase
+    .auth()
+    .signInWithEmailAndPassword(user.email, req.body.currentPassword)
+    .then((userCredential) => {
+      const user = userCredential.user;
+      return user.updatePassword(req.body.password);
+    })
+    .then(() => {
+      return res.status(200).json({
+        error: false,
+        message: 'Password updated successfully!'
+      });
+    })
+    .catch((error) => {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      if (errorCode === 'auth/user-not-found') {
+        return res.status(404).json({
+          error: true,
+          message: 'User not found'
+        });
+      } else if (errorCode === 'auth/wrong-password') {
+        return res.status(401).json({
+          error: true,
+          message: 'Invalid current password'
+        });
+      } else if (errorCode === 'auth/weak-password') {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        });
+      } else {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        });
+      }
+    });
+};
+
+
 // User Information
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
@@ -290,8 +357,6 @@ exports.addUserData = (req, res) => {
     weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
     userBMI,
-    userActivityLevel: req.body.activityLevel,
-    userStressLevel: req.body.stressLevel,
     age,
     photoURL: null,
   }
