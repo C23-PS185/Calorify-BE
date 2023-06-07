@@ -2,6 +2,7 @@ const firebase = require('firebase/app')
 require('firebase/auth')
 require('firebase/firestore')
 require('dotenv').config()
+require('firebase/storage');
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
@@ -14,5 +15,8 @@ const firebaseConfig = {
 }
 
 firebase.initializeApp(firebaseConfig)
+
+const storage = firebase.storage();
+const bucket = storage.ref();
 
 module.exports = firebase

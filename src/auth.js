@@ -1,5 +1,6 @@
 /* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
+const admin = require('../config/firebase-admin.js')
 const db = firebase.firestore()
 
 // register
@@ -288,7 +289,8 @@ exports.addUserData = (req, res) => {
     userHeight: req.body.userHeight,
     weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
-    userBMI
+    userBMI,
+    photoURL: null, // Initialize the photoURL as null
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
@@ -531,3 +533,60 @@ exports.getAllFoodsData = async (req, res) => {
     data: foods
   })
 }
+
+// Upload photo profile
+exports.uploadImages = async (req, res) => {
+  const file = req.file;
+  const userId = req.params.userId;
+
+  if (!file) {
+    return res.status(400).send('No file uploaded.');
+  }
+
+  try {
+    // Create a reference to the Firebase Storage bucket
+    const bucket = admin.storage().bucket();
+
+    // Extract the original file extension
+    const originalExtension = file.originalname.split('.').pop();
+
+    // Generate a unique filename with the original file extension
+    const filename = `${userId}.${originalExtension}`;
+
+    // Upload the file to Firebase Storage
+    const fileRef = bucket.file(`profile/${filename}`);
+    const uploadStream = fileRef.createWriteStream();
+
+    uploadStream.on('error', (error) => {
+      console.error(error);
+      return res.status(500).send('An error occurred while uploading the file.');
+    });
+
+    uploadStream.on('finish', async () => {
+      // File uploaded successfully
+
+      // Generate the dynamic link for the uploaded image
+      const config = {
+        action: 'read',
+        expires: '03-01-2500' // Replace with the desired expiration date for the link
+      };
+
+      const [url] = await fileRef.getSignedUrl(config);
+
+      // Update the user document in the 'users' collection with the photoURL
+      const userRef = db.collection('users').doc(userId);
+      try {
+        await userRef.update({ photoURL: url });
+        return res.status(200).send('File uploaded successfully.');
+      } catch (error) {
+        console.error(error);
+        return res.status(500).send('An error occurred while updating the user document.');
+      }
+    });
+
+    uploadStream.end(file.buffer);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('An error occurred while uploading the file.');
+  }
+};
