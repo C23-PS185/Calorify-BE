@@ -14,7 +14,8 @@ const {
   getDailyCalorieLog,
   getMonthlyCalorieLog,
   getAllFoodsData,
-  getFoodData
+  getFoodData,
+  updateUserAssessment
 } = require('./auth')
 
 router.post('/register', register)
@@ -33,6 +34,8 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 router.put('/user-data/:userId', upload.single('image'),editUserData)
+
+router.put('/update-user-assessment/:userId', updateUserAssessment)
 
 router.get('/user-data/:userId', getUserData)
 

@@ -188,9 +188,9 @@ exports.addUserData = (req, res) => {
   const userId = req.body.userId
 
   // Get user age
-  const today = new Date()
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const m = today.getMonth() - birthDate.getMonth()
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--
   }
@@ -290,7 +290,10 @@ exports.addUserData = (req, res) => {
     weightGoal: req.body.weightGoal,
     userCalorieIntake: calorieIntake,
     userBMI,
-    photoURL: null
+    userActivityLevel: req.body.activityLevel,
+    userStressLevel: req.body.stressLevel,
+    age,
+    photoURL: null,
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
@@ -581,11 +584,19 @@ exports.editUserData = async (req, res) => {
   const birthDate = new Date(`${month}-${day}-${year}`);
   const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`;
 
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
   const file = req.file;
   const profileUpdateData = {
     fullName: req.body.fullName,
     gender: req.body.gender,
-    birthDate: formattedBirthDate
+    birthDate: formattedBirthDate,
+    age,
   };
 
   try {
@@ -669,6 +680,153 @@ exports.editUserData = async (req, res) => {
     return res.status(500).json({
       error: true,
       message: 'An error occurred while uploading the file.'
+    });
+  }
+};
+
+// Update User Assesment
+exports.updateUserAssessment = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // Retrieve user data from the database
+    const docRef = db.collection('users').doc(userId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist.'
+      });
+    }
+
+    const userData = doc.data();
+
+    // Update the self-assessment data
+    userData.userHeight = req.body.userHeight;
+    userData.userWeight = req.body.userWeight;
+    userData.userActivityLevel = req.body.activityLevel;
+    userData.userStressLevel = req.body.stressLevel;
+    userData.weightGoal = req.body.weightGoal;
+
+  // Get birthdate from doc
+  const birthDateParts = userData.birthDate.split('-');
+  const day = birthDateParts[0].padStart(2, '0');
+  const month = birthDateParts[1].padStart(2, '0');
+  const year = birthDateParts[2];
+  const birthDate = new Date(`${month}-${day}-${year}`)
+
+  // Get age from birthdate
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+
+  // Calorie calculation
+  const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
+  const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
+
+  // BMI calculation
+  const heightInMeters = req.body.userHeight / 100
+  const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
+
+  // Get BMR value
+  userData.BMI = userBMI
+
+  // Get activity value
+  let activityValue = 0
+
+  switch (req.body.activityLevel) {
+    case 0:
+      activityValue = 1.1
+      break
+    case 1:
+      activityValue = 1.2
+      break
+    case 2:
+      activityValue = 1.3
+      break
+    default:
+      activityValue = 1.1
+      break
+  }
+
+  // Get stress value
+  let stressValue = 0
+  switch (req.body.stressLevel) {
+    case 0:
+      stressValue = 1.1
+      break
+    case 1:
+      stressValue = 1.3
+      break
+    case 2:
+      stressValue = 1.45
+      break
+    case 3:
+      stressValue = 1.55
+      break
+    case 4:
+      stressValue = 1.7
+      break
+    default:
+      stressValue = 1.1
+      break
+  }
+
+  // Calorie intake calculation
+  let calorieIntake = 0
+  switch (req.body.gender) {
+    case 'Laki-Laki':
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+    case 'Perempuan':
+      calorieIntake = femaleBMR * activityValue * stressValue
+      break
+    default:
+      calorieIntake = maleBMR * activityValue * stressValue
+      break
+  }
+
+  // Set user calorie intake based on weightGoal
+  switch (req.body.weightGoal) {
+    case 0:
+      calorieIntake = Math.round(calorieIntake * 0.6)
+      break
+    case 1:
+      calorieIntake = Math.round(calorieIntake * 0.8)
+      break
+    case 2:
+      calorieIntake = Math.round(calorieIntake)
+      break
+    case 3:
+      calorieIntake = Math.round(calorieIntake * 1.2)
+      break
+    case 4:
+      calorieIntake = Math.round(calorieIntake * 1.4)
+      break
+    default:
+      calorieIntake = Math.round(calorieIntake)
+      break
+  }
+
+  // update calorie intake
+  userData.userCalorieIntake = calorieIntake
+
+    // Update the data in the database
+    await docRef.update(userData);
+
+    return res.status(200).json({
+      error: false,
+      message: 'Information updated successfully!',
+      data: userData
+    });
+  } catch (error) {
+    return res.status(500).json({
+      error: true,
+      message: error.message
     });
   }
 };
