@@ -638,6 +638,7 @@ exports.getAllFoodsData = async (req, res) => {
   })
 }
 
+
 exports.editUserData = async (req, res) => {
   const { userId } = req.params;
   const updatedAt = new Date().toISOString();
@@ -770,9 +771,10 @@ exports.updateUserAssessment = async (req, res) => {
     // Update the self-assessment data
     userData.userHeight = req.body.userHeight;
     userData.userWeight = req.body.userWeight;
-    userData.userActivityLevel = req.body.activityLevel;
-    userData.userStressLevel = req.body.stressLevel;
     userData.weightGoal = req.body.weightGoal;
+
+    userActivityLevel = req.body.activityLevel;
+    userStressLevel = req.body.stressLevel;
 
   // Get birthdate from doc
   const birthDateParts = userData.birthDate.split('-');
