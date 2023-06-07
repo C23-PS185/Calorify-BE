@@ -454,7 +454,7 @@ exports.addCalorieLog = (req, res) => {
       } else {
         return res.status(500).json({
           error: true,
-          message: 'Food document not found'
+          message: 'Food document not Due to time constraints, we only have some food data'
         })
       }
     })
