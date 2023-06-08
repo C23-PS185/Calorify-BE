@@ -582,6 +582,13 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       })
     })
 
+    if (totalMonthlyCalories === 0) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist'
+      })
+    }
+
     return res.status(200).json({
       monthlyLog,
       totalMonthlyCalories
