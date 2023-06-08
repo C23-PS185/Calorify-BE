@@ -405,14 +405,14 @@ exports.getUserData = async (req, res) => {
 }
 
 // Add calorie log to the database
-exports.addCalorieLog = (req, res) => {
+exports.addCalorieLog = async (req, res) => {
   const today = new Date()
 
   function padTo2Digits (num) {
     return num.toString().padStart(2, '0')
   }
 
-  const year = today.getFullYear()
+  const year = today.getFullYear().toString()
   const month = padTo2Digits(today.getMonth() + 1)
   const date = padTo2Digits(today.getDate())
   const hours = padTo2Digits(today.getHours())
@@ -421,10 +421,6 @@ exports.addCalorieLog = (req, res) => {
   const createdAtDate = `${date}-${month}-${year}`
 
   const { userId } = req.params
-  const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-
-  const foodCalorieData = db.collection('food-calories').doc(req.body.foodName)
 
   if (!req.body.foodName || !req.body.foodCalories || !req.body.fnbType || req.body.mealTime === undefined) {
     return res.status(400).json({
@@ -433,105 +429,94 @@ exports.addCalorieLog = (req, res) => {
     })
   }
 
-  foodCalorieData
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        const foodData = doc.data()
-        const imageUrl = foodData.image
+  const imageUrl = await db.collection('food-calories').doc(req.body.foodName).get().then((doc) => {
+    return doc.data().image
+  })
 
-        docRef.get()
-          .then((doc) => {
-            const calorieLogData = {}
-            switch (req.body.mealTime) {
-              case 0:
-                calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 1:
-                calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 2:
-                calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 3:
-                calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              default:
-                calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-            }
-            const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
-            let totalDailyCalories = req.body.foodCalories
+  const calorieLogData = {}
 
-            logCollection.get()
-              .then((logDoc) => {
-                if (logDoc.exists && logDoc.data().totalDailyCalories) {
-                  totalDailyCalories += logDoc.data().totalDailyCalories
-                }
+  switch (req.body.mealTime) {
+    case 0:
+      calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today
+      })
+      break
+    case 1:
+      calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today
+      })
+      break
+    case 2:
+      calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today
+      })
+      break
+    case 3:
+      calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today
+      })
+      break
+    default:
+      calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today
+      })
+      break
+  }
 
-                calorieLogData.totalDailyCalories = totalDailyCalories
-                logCollection.set(calorieLogData, { merge: true })
-                  .then(() => {
-                    return res.status(200).json({
-                      error: false,
-                      message: 'Information saved successfully!'
-                    })
-                  }).catch((e) => {
-                    return res.status(500).json({
-                      error: true,
-                      message: e
-                    })
-                  })
-              })
-          })
-      } else {
+  let totalDailyCalories = req.body.foodCalories
+
+  const docRef = db.collection('calorie-log').doc(userId).collection('foodCollection').doc(year).collection(month).doc(date)
+
+  await docRef.get().then((logDoc) => {
+    if (logDoc.exists && logDoc.data().totalDailyCalories) {
+      totalDailyCalories += logDoc.data().totalDailyCalories
+    }
+
+    calorieLogData.totalDailyCalories = totalDailyCalories
+
+    docRef.set(calorieLogData, { merge: true })
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      }).catch((e) => {
         return res.status(500).json({
           error: true,
-          message: 'Food document not Due to time constraints, we only have some food data'
+          message: e
         })
-      }
-    })
-    .catch((e) => {
-      return res.status(500).json({
-        error: true,
-        message: e
       })
-    })
+  })
 }
 
 // Get Daily Calorie Log
@@ -564,6 +549,8 @@ exports.getMonthlyCalorieLog = async (req, res) => {
 
   const docRef = db.collection('calorie-log').doc(userId)
   const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
+  console.log(year)
+  console.log(month)
   const logCollection = yearCollection.collection(`${month}`)
   try {
     const querySnapshot = await logCollection.get()
@@ -581,6 +568,13 @@ exports.getMonthlyCalorieLog = async (req, res) => {
         data: doc.data()
       })
     })
+
+    if (totalMonthlyCalories === 0) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist'
+      })
+    }
 
     return res.status(200).json({
       monthlyLog,
