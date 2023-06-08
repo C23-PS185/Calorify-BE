@@ -33,10 +33,10 @@ router.post('/edit-password', editPassword)
 
 router.post('/user-data', addUserData)
 
-const multer = require('multer');
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-router.put('/user-data/:userId', upload.single('image'),editUserData)
+const multer = require('multer')
+const storage = multer.memoryStorage()
+const upload = multer({ storage })
+router.put('/user-data/:userId', upload.single('image'), editUserData)
 
 router.put('/update-user-assessment/:userId', updateUserAssessment)
 
