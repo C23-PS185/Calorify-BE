@@ -241,7 +241,8 @@ exports.editPassword = (req, res) => {
 
 // User Information
 exports.addUserData = (req, res) => {
-  const createdAt = new Date().toISOString()
+  const timezone = moment().tz('Asia/Jakarta')
+  const createdAt = timezone.toString()
 
   const birthDate = moment(req.body.birthDate, 'D-MM-YYYY').toDate()
   const formattedBirthDate = moment(birthDate).format('DD-MM-YYYY')
@@ -515,8 +516,8 @@ exports.getDailyCalorieLog = async (req, res) => {
   const { userId, date, month, year } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
+  const yearCollection = docRef.collection('foodCollection').doc(year)
+  const logCollection = yearCollection.collection(month).doc(date)
 
   const doc = await logCollection.get()
   if (!doc.exists) {
@@ -539,8 +540,8 @@ exports.getMonthlyCalorieLog = async (req, res) => {
   const { userId, month, year } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  const logCollection = yearCollection.collection(`${month}`)
+  const yearCollection = docRef.collection('foodCollection').doc(year)
+  const logCollection = yearCollection.collection(month)
   try {
     const querySnapshot = await logCollection.get()
     const monthlyLog = []
@@ -622,14 +623,11 @@ exports.getAllFoodsData = async (req, res) => {
 
 exports.editUserData = async (req, res) => {
   const { userId } = req.params
-  const updatedAt = new Date().toISOString()
+  const timezone = moment().tz('Asia/Jakarta')
+  const updatedAt = timezone.toString()
 
-  const birthDateParts = req.body.birthDate.split('-')
-  const day = birthDateParts[0].padStart(2, '0')
-  const month = birthDateParts[1].padStart(2, '0')
-  const year = birthDateParts[2]
-  const birthDate = new Date(`${month}-${day}-${year}`)
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
+  const birthDate = moment(req.body.birthDate, 'D-MM-YYYY').toDate()
+  const formattedBirthDate = moment(birthDate).format('DD-MM-YYYY')
 
   const today = new Date()
   let age = today.getFullYear() - birthDate.getFullYear()
@@ -754,15 +752,11 @@ exports.updateUserAssessment = async (req, res) => {
     userData.userWeight = req.body.userWeight
     userData.weightGoal = req.body.weightGoal
 
-    // userActivityLevel = req.body.activityLevel
-    // userStressLevel = req.body.stressLevel
+    userData.ActivityLevel = req.body.activityLevel
+    userData.StressLevel = req.body.stressLevel
 
     // Get birthdate from doc
-    const birthDateParts = userData.birthDate.split('-')
-    const day = birthDateParts[0].padStart(2, '0')
-    const month = birthDateParts[1].padStart(2, '0')
-    const year = birthDateParts[2]
-    const birthDate = new Date(`${month}-${day}-${year}`)
+    const birthDate = moment(userData.birthDate, 'D-MM-YYYY').toDate()
 
     // Get age from birthdate
     const today = new Date()
