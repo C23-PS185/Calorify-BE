@@ -1,6 +1,8 @@
 /* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
 const admin = require('../config/firebase-admin.js')
+const moment = require('moment')
+require('moment-timezone')
 const db = firebase.firestore()
 
 // register
@@ -241,15 +243,8 @@ exports.editPassword = (req, res) => {
 exports.addUserData = (req, res) => {
   const createdAt = new Date().toISOString()
 
-  const birthDateParts = req.body.birthDate.split('-')
-
-  const day = birthDateParts[0].padStart(2, '0')
-  const month = birthDateParts[1].padStart(2, '0')
-  const year = birthDateParts[2]
-
-  const birthDate = new Date(`${month}-${day}-${year}`)
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
-
+  const birthDate = moment(req.body.birthDate, 'D-MM-YYYY').toDate()
+  const formattedBirthDate = moment(birthDate).format('DD-MM-YYYY')
   const userId = req.body.userId
 
   // Get user age
@@ -353,6 +348,8 @@ exports.addUserData = (req, res) => {
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
     weightGoal: req.body.weightGoal,
+    stressLevel: req.body.stressLevel,
+    activityLevel: req.body.activityLevel,
     userCalorieIntake: calorieIntake,
     userBMI,
     age,
@@ -406,19 +403,13 @@ exports.getUserData = async (req, res) => {
 
 // Add calorie log to the database
 exports.addCalorieLog = async (req, res) => {
-  const today = new Date()
+  const today = moment().tz('Asia/Jakarta')
+  const year = today.format('YYYY')
+  const month = today.format('MM')
+  const date = today.format('DD')
 
-  function padTo2Digits (num) {
-    return num.toString().padStart(2, '0')
-  }
-
-  const year = today.getFullYear().toString()
-  const month = padTo2Digits(today.getMonth() + 1)
-  const date = padTo2Digits(today.getDate())
-  const hours = padTo2Digits(today.getHours())
-  const minutes = padTo2Digits(today.getMinutes())
-  const createdAtTime = `${hours}:${minutes}`
-  const createdAtDate = `${date}-${month}-${year}`
+  const createdAtTime = moment().tz('Asia/Jakarta').format('HH:mm')
+  const createdAtDate = moment().tz('Asia/Jakarta').format('DD-MM-YYYY')
 
   const { userId } = req.params
 
@@ -444,7 +435,7 @@ exports.addCalorieLog = async (req, res) => {
         createdAtDate,
         createdAtTime,
         imageUrl,
-        timestamp: today
+        timestamp: today.toString()
       })
       break
     case 1:
@@ -455,7 +446,7 @@ exports.addCalorieLog = async (req, res) => {
         createdAtDate,
         createdAtTime,
         imageUrl,
-        timestamp: today
+        timestamp: today.toString()
       })
       break
     case 2:
@@ -466,7 +457,7 @@ exports.addCalorieLog = async (req, res) => {
         createdAtDate,
         createdAtTime,
         imageUrl,
-        timestamp: today
+        timestamp: today.toString()
       })
       break
     case 3:
@@ -477,7 +468,7 @@ exports.addCalorieLog = async (req, res) => {
         createdAtDate,
         createdAtTime,
         imageUrl,
-        timestamp: today
+        timestamp: today.toString()
       })
       break
     default:
@@ -488,7 +479,7 @@ exports.addCalorieLog = async (req, res) => {
         createdAtDate,
         createdAtTime,
         imageUrl,
-        timestamp: today
+        timestamp: today.toString()
       })
       break
   }
@@ -549,8 +540,6 @@ exports.getMonthlyCalorieLog = async (req, res) => {
 
   const docRef = db.collection('calorie-log').doc(userId)
   const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  console.log(year)
-  console.log(month)
   const logCollection = yearCollection.collection(`${month}`)
   try {
     const querySnapshot = await logCollection.get()
