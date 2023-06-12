@@ -752,8 +752,8 @@ exports.updateUserAssessment = async (req, res) => {
     userData.userWeight = req.body.userWeight
     userData.weightGoal = req.body.weightGoal
 
-    userData.ActivityLevel = req.body.activityLevel
-    userData.StressLevel = req.body.stressLevel
+    userData.activityLevel = req.body.activityLevel
+    userData.stressLevel = req.body.stressLevel
 
     // Get birthdate from doc
     const birthDate = moment(userData.birthDate, 'D-MM-YYYY').toDate()
