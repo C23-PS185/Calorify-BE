@@ -1,6 +1,8 @@
 /* eslint-disable no-case-declarations */
 const firebase = require('../config/firebase.js')
 const admin = require('../config/firebase-admin.js')
+const moment = require('moment')
+require('moment-timezone')
 const db = firebase.firestore()
 
 // register
@@ -172,25 +174,84 @@ exports.forgetPassword = (req, res) => {
     })
 }
 
+// edit password
+exports.editPassword = (req, res) => {
+  const user = firebase.auth().currentUser
+
+  if (!user) {
+    return res.status(401).json({
+      error: true,
+      message: 'User not authenticated'
+    })
+  }
+
+  if (!req.body.password) {
+    return res.status(422).json({
+      error: true,
+      message: 'Password is required'
+    })
+  }
+
+  if (req.body.passwordConfirmation !== req.body.password) {
+    return res.status(400).json({
+      error: true,
+      message: 'Passwords do not match'
+    })
+  }
+
+  firebase
+    .auth()
+    .signInWithEmailAndPassword(user.email, req.body.currentPassword)
+    .then((userCredential) => {
+      const user = userCredential.user
+      return user.updatePassword(req.body.password)
+    })
+    .then(() => {
+      return res.status(200).json({
+        error: false,
+        message: 'Password updated successfully!'
+      })
+    })
+    .catch((error) => {
+      const errorCode = error.code
+      const errorMessage = error.message
+      if (errorCode === 'auth/user-not-found') {
+        return res.status(404).json({
+          error: true,
+          message: 'User not found'
+        })
+      } else if (errorCode === 'auth/wrong-password') {
+        return res.status(401).json({
+          error: true,
+          message: 'Invalid current password'
+        })
+      } else if (errorCode === 'auth/weak-password') {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
+      } else {
+        return res.status(500).json({
+          error: true,
+          message: errorMessage
+        })
+      }
+    })
+}
+
 // User Information
 exports.addUserData = (req, res) => {
-  const createdAt = new Date().toISOString()
+  const timezone = moment().tz('Asia/Jakarta')
+  const createdAt = timezone.toString()
 
-  const birthDateParts = req.body.birthDate.split('-')
-
-  const day = birthDateParts[0].padStart(2, '0')
-  const month = birthDateParts[1].padStart(2, '0')
-  const year = birthDateParts[2]
-
-  const birthDate = new Date(`${month}-${day}-${year}`)
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`
-
+  const birthDate = moment(req.body.birthDate, 'D-MM-YYYY').toDate()
+  const formattedBirthDate = moment(birthDate).format('DD-MM-YYYY')
   const userId = req.body.userId
 
   // Get user age
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const m = today.getMonth() - birthDate.getMonth()
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--
   }
@@ -288,12 +349,12 @@ exports.addUserData = (req, res) => {
     userWeight: req.body.userWeight,
     userHeight: req.body.userHeight,
     weightGoal: req.body.weightGoal,
+    stressLevel: req.body.stressLevel,
+    activityLevel: req.body.activityLevel,
     userCalorieIntake: calorieIntake,
     userBMI,
-    userActivityLevel: req.body.activityLevel,
-    userStressLevel: req.body.stressLevel,
     age,
-    photoURL: null,
+    photoURL: null
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
@@ -342,26 +403,16 @@ exports.getUserData = async (req, res) => {
 }
 
 // Add calorie log to the database
-exports.addCalorieLog = (req, res) => {
-  const today = new Date()
+exports.addCalorieLog = async (req, res) => {
+  const today = moment().tz('Asia/Jakarta')
+  const year = today.format('YYYY')
+  const month = today.format('MM')
+  const date = today.format('DD')
 
-  function padTo2Digits (num) {
-    return num.toString().padStart(2, '0')
-  }
-
-  const year = today.getFullYear()
-  const month = padTo2Digits(today.getMonth() + 1)
-  const date = padTo2Digits(today.getDate())
-  const hours = padTo2Digits(today.getHours())
-  const minutes = padTo2Digits(today.getMinutes())
-  const createdAtTime = `${hours}:${minutes}`
-  const createdAtDate = `${date}-${month}-${year}`
+  const createdAtTime = moment().tz('Asia/Jakarta').format('HH:mm')
+  const createdAtDate = moment().tz('Asia/Jakarta').format('DD-MM-YYYY')
 
   const { userId } = req.params
-  const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-
-  const foodCalorieData = db.collection('food-calories').doc(req.body.foodName)
 
   if (!req.body.foodName || !req.body.foodCalories || !req.body.fnbType || req.body.mealTime === undefined) {
     return res.status(400).json({
@@ -370,105 +421,94 @@ exports.addCalorieLog = (req, res) => {
     })
   }
 
-  foodCalorieData
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        const foodData = doc.data()
-        const imageUrl = foodData.image
+  const imageUrl = await db.collection('food-calories').doc(req.body.foodName).get().then((doc) => {
+    return doc.data().image
+  })
 
-        docRef.get()
-          .then((doc) => {
-            const calorieLogData = {}
-            switch (req.body.mealTime) {
-              case 0:
-                calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 1:
-                calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 2:
-                calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              case 3:
-                calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-              default:
-                calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
-                  foodName: req.body.foodName,
-                  fnbType: req.body.fnbType,
-                  foodCalories: req.body.foodCalories,
-                  createdAtDate,
-                  createdAtTime,
-                  imageUrl
-                })
-                break
-            }
-            const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
-            let totalDailyCalories = req.body.foodCalories
+  const calorieLogData = {}
 
-            logCollection.get()
-              .then((logDoc) => {
-                if (logDoc.exists && logDoc.data().totalDailyCalories) {
-                  totalDailyCalories += logDoc.data().totalDailyCalories
-                }
+  switch (req.body.mealTime) {
+    case 0:
+      calorieLogData.breakfast = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today.toString()
+      })
+      break
+    case 1:
+      calorieLogData.lunch = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today.toString()
+      })
+      break
+    case 2:
+      calorieLogData.dinner = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today.toString()
+      })
+      break
+    case 3:
+      calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today.toString()
+      })
+      break
+    default:
+      calorieLogData.others = firebase.firestore.FieldValue.arrayUnion({
+        foodName: req.body.foodName,
+        fnbType: req.body.fnbType,
+        foodCalories: req.body.foodCalories,
+        createdAtDate,
+        createdAtTime,
+        imageUrl,
+        timestamp: today.toString()
+      })
+      break
+  }
 
-                calorieLogData.totalDailyCalories = totalDailyCalories
-                logCollection.set(calorieLogData, { merge: true })
-                  .then(() => {
-                    return res.status(200).json({
-                      error: false,
-                      message: 'Information saved successfully!'
-                    })
-                  }).catch((e) => {
-                    return res.status(500).json({
-                      error: true,
-                      message: e
-                    })
-                  })
-              })
-          })
-      } else {
+  let totalDailyCalories = req.body.foodCalories
+
+  const docRef = db.collection('calorie-log').doc(userId).collection('foodCollection').doc(year).collection(month).doc(date)
+
+  await docRef.get().then((logDoc) => {
+    if (logDoc.exists && logDoc.data().totalDailyCalories) {
+      totalDailyCalories += logDoc.data().totalDailyCalories
+    }
+
+    calorieLogData.totalDailyCalories = totalDailyCalories
+
+    docRef.set(calorieLogData, { merge: true })
+      .then(() => {
+        return res.status(200).json({
+          error: false,
+          message: 'Information saved successfully!'
+        })
+      }).catch((e) => {
         return res.status(500).json({
           error: true,
-          message: 'Food document not Due to time constraints, we only have some food data'
+          message: e
         })
-      }
-    })
-    .catch((e) => {
-      return res.status(500).json({
-        error: true,
-        message: e
       })
-    })
+  })
 }
 
 // Get Daily Calorie Log
@@ -476,8 +516,8 @@ exports.getDailyCalorieLog = async (req, res) => {
   const { userId, date, month, year } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  const logCollection = yearCollection.collection(`${month}`).doc(`${date}`)
+  const yearCollection = docRef.collection('foodCollection').doc(year)
+  const logCollection = yearCollection.collection(month).doc(date)
 
   const doc = await logCollection.get()
   if (!doc.exists) {
@@ -500,8 +540,8 @@ exports.getMonthlyCalorieLog = async (req, res) => {
   const { userId, month, year } = req.params
 
   const docRef = db.collection('calorie-log').doc(userId)
-  const yearCollection = docRef.collection('foodCollection').doc(`${year}`)
-  const logCollection = yearCollection.collection(`${month}`)
+  const yearCollection = docRef.collection('foodCollection').doc(year)
+  const logCollection = yearCollection.collection(month)
   try {
     const querySnapshot = await logCollection.get()
     const monthlyLog = []
@@ -519,7 +559,15 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       })
     })
 
+    if (totalMonthlyCalories === 0) {
+      return res.status(500).json({
+        error: true,
+        message: 'Data does not exist'
+      })
+    }
+
     return res.status(200).json({
+      error: false,
       monthlyLog,
       totalMonthlyCalories
     })
@@ -574,53 +622,50 @@ exports.getAllFoodsData = async (req, res) => {
 }
 
 exports.editUserData = async (req, res) => {
-  const { userId } = req.params;
-  const updatedAt = new Date().toISOString();
+  const { userId } = req.params
+  const timezone = moment().tz('Asia/Jakarta')
+  const updatedAt = timezone.toString()
 
-  const birthDateParts = req.body.birthDate.split('-');
-  const day = birthDateParts[0].padStart(2, '0');
-  const month = birthDateParts[1].padStart(2, '0');
-  const year = birthDateParts[2];
-  const birthDate = new Date(`${month}-${day}-${year}`);
-  const formattedBirthDate = `${birthDate.getDate().toString()}-${(birthDate.getMonth() + 1).toString()}-${birthDate.getFullYear().toString()}`;
+  const birthDate = moment(req.body.birthDate, 'D-MM-YYYY').toDate()
+  const formattedBirthDate = moment(birthDate).format('DD-MM-YYYY')
 
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const m = today.getMonth() - birthDate.getMonth()
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
+    age--
   }
 
-  const file = req.file;
+  const file = req.file
   const profileUpdateData = {
     fullName: req.body.fullName,
     gender: req.body.gender,
     birthDate: formattedBirthDate,
-    age,
-  };
+    age
+  }
 
   try {
     // Create a reference to the Firebase Storage bucket
-    const bucket = admin.storage().bucket();
+    const bucket = admin.storage().bucket()
 
     // Check if a file is provided for profile photo update
     if (file) {
       // Extract the original file extension
-      const originalExtension = file.originalname.split('.').pop();
+      const originalExtension = file.originalname.split('.').pop()
 
       // Generate a unique filename with the original file extension
-      const filename = `${userId}.${originalExtension}`;
+      const filename = `${userId}.${originalExtension}`
 
       // Upload the file to Firebase Storage
-      const fileRef = bucket.file(`profile/${filename}`);
-      const uploadStream = fileRef.createWriteStream();
+      const fileRef = bucket.file(`profile/${filename}`)
+      const uploadStream = fileRef.createWriteStream()
 
-      uploadStream.on('error', (error) => {
+      uploadStream.on('error', (e) => {
         return res.status(500).json({
           error: true,
           message: 'An error occurred while uploading the file.'
-        });
-      });
+        })
+      })
 
       uploadStream.on('finish', async () => {
         // File uploaded successfully
@@ -629,16 +674,16 @@ exports.editUserData = async (req, res) => {
         const config = {
           action: 'read',
           expires: '03-01-2500' // Replace with the desired expiration date for the link
-        };
+        }
 
-        const [url] = await fileRef.getSignedUrl(config);
+        const [url] = await fileRef.getSignedUrl(config)
 
         // Update the user document in the 'users' collection with the photoURL
-        profileUpdateData.photoURL = url;
+        profileUpdateData.photoURL = url
 
         // Update the user data in the 'users' collection
         try {
-          await db.collection('users').doc(userId).update(profileUpdateData);
+          await db.collection('users').doc(userId).update(profileUpdateData)
           return res.status(200).json({
             error: false,
             message: 'User data and photo profile updated successfully.',
@@ -646,21 +691,21 @@ exports.editUserData = async (req, res) => {
               ...profileUpdateData,
               updatedAt
             }
-          });
+          })
         } catch (error) {
           return res.status(500).json({
             error: true,
             message: 'An error occurred while updating the user data and photo profile.'
-          });
+          })
         }
-      });
+      })
 
-      uploadStream.end(file.buffer);
+      uploadStream.end(file.buffer)
     } else {
       // No file provided for profile photo update
       // Update only the user data in the 'users' collection
       try {
-        await db.collection('users').doc(userId).update(profileUpdateData);
+        await db.collection('users').doc(userId).update(profileUpdateData)
         return res.status(200).json({
           error: false,
           message: 'User data updated successfully.',
@@ -668,165 +713,162 @@ exports.editUserData = async (req, res) => {
             ...profileUpdateData,
             updatedAt
           }
-        });
+        })
       } catch (error) {
         return res.status(500).json({
           error: true,
           message: 'An error occurred while updating the user data.'
-        });
+        })
       }
     }
   } catch (error) {
     return res.status(500).json({
       error: true,
       message: 'An error occurred while uploading the file.'
-    });
+    })
   }
-};
+}
 
 // Update User Assesment
 exports.updateUserAssessment = async (req, res) => {
-  const { userId } = req.params;
+  const { userId } = req.params
 
   try {
     // Retrieve user data from the database
-    const docRef = db.collection('users').doc(userId);
-    const doc = await docRef.get();
+    const docRef = db.collection('users').doc(userId)
+    const doc = await docRef.get()
 
     if (!doc.exists) {
       return res.status(500).json({
         error: true,
         message: 'Data does not exist.'
-      });
+      })
     }
 
-    const userData = doc.data();
+    const userData = doc.data()
 
     // Update the self-assessment data
-    userData.userHeight = req.body.userHeight;
-    userData.userWeight = req.body.userWeight;
-    userData.userActivityLevel = req.body.activityLevel;
-    userData.userStressLevel = req.body.stressLevel;
-    userData.weightGoal = req.body.weightGoal;
+    userData.userHeight = req.body.userHeight
+    userData.userWeight = req.body.userWeight
+    userData.weightGoal = req.body.weightGoal
 
-  // Get birthdate from doc
-  const birthDateParts = userData.birthDate.split('-');
-  const day = birthDateParts[0].padStart(2, '0');
-  const month = birthDateParts[1].padStart(2, '0');
-  const year = birthDateParts[2];
-  const birthDate = new Date(`${month}-${day}-${year}`)
+    userData.activityLevel = req.body.activityLevel
+    userData.stressLevel = req.body.stressLevel
 
-  // Get age from birthdate
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const m = today.getMonth() - birthDate.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-    age--
-  }
+    // Get birthdate from doc
+    const birthDate = moment(userData.birthDate, 'D-MM-YYYY').toDate()
 
-  // Calorie calculation
-  const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
-  const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
+    // Get age from birthdate
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
 
-  // BMI calculation
-  const heightInMeters = req.body.userHeight / 100
-  const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
+    // Calorie calculation
+    const maleBMR = 66 + (13.7 * req.body.userWeight) + (5 * req.body.userHeight) - (6.8 * age)
+    const femaleBMR = 655 + (9.6 * req.body.userWeight) + (1.8 * req.body.userHeight) - (4.7 * age)
 
-  // Get BMR value
-  userData.BMI = userBMI
+    // BMI calculation
+    const heightInMeters = req.body.userHeight / 100
+    const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
 
-  // Get activity value
-  let activityValue = 0
+    // Get BMR value
+    userData.BMI = userBMI
 
-  switch (req.body.activityLevel) {
-    case 0:
-      activityValue = 1.1
-      break
-    case 1:
-      activityValue = 1.2
-      break
-    case 2:
-      activityValue = 1.3
-      break
-    default:
-      activityValue = 1.1
-      break
-  }
+    // Get activity value
+    let activityValue = 0
 
-  // Get stress value
-  let stressValue = 0
-  switch (req.body.stressLevel) {
-    case 0:
-      stressValue = 1.1
-      break
-    case 1:
-      stressValue = 1.3
-      break
-    case 2:
-      stressValue = 1.45
-      break
-    case 3:
-      stressValue = 1.55
-      break
-    case 4:
-      stressValue = 1.7
-      break
-    default:
-      stressValue = 1.1
-      break
-  }
+    switch (req.body.activityLevel) {
+      case 0:
+        activityValue = 1.1
+        break
+      case 1:
+        activityValue = 1.2
+        break
+      case 2:
+        activityValue = 1.3
+        break
+      default:
+        activityValue = 1.1
+        break
+    }
 
-  // Calorie intake calculation
-  let calorieIntake = 0
-  switch (req.body.gender) {
-    case 'Laki-Laki':
-      calorieIntake = maleBMR * activityValue * stressValue
-      break
-    case 'Perempuan':
-      calorieIntake = femaleBMR * activityValue * stressValue
-      break
-    default:
-      calorieIntake = maleBMR * activityValue * stressValue
-      break
-  }
+    // Get stress value
+    let stressValue = 0
+    switch (req.body.stressLevel) {
+      case 0:
+        stressValue = 1.1
+        break
+      case 1:
+        stressValue = 1.3
+        break
+      case 2:
+        stressValue = 1.45
+        break
+      case 3:
+        stressValue = 1.55
+        break
+      case 4:
+        stressValue = 1.7
+        break
+      default:
+        stressValue = 1.1
+        break
+    }
 
-  // Set user calorie intake based on weightGoal
-  switch (req.body.weightGoal) {
-    case 0:
-      calorieIntake = Math.round(calorieIntake * 0.6)
-      break
-    case 1:
-      calorieIntake = Math.round(calorieIntake * 0.8)
-      break
-    case 2:
-      calorieIntake = Math.round(calorieIntake)
-      break
-    case 3:
-      calorieIntake = Math.round(calorieIntake * 1.2)
-      break
-    case 4:
-      calorieIntake = Math.round(calorieIntake * 1.4)
-      break
-    default:
-      calorieIntake = Math.round(calorieIntake)
-      break
-  }
+    // Calorie intake calculation
+    let calorieIntake = 0
+    switch (req.body.gender) {
+      case 'Laki-Laki':
+        calorieIntake = maleBMR * activityValue * stressValue
+        break
+      case 'Perempuan':
+        calorieIntake = femaleBMR * activityValue * stressValue
+        break
+      default:
+        calorieIntake = maleBMR * activityValue * stressValue
+        break
+    }
 
-  // update calorie intake
-  userData.userCalorieIntake = calorieIntake
+    // Set user calorie intake based on weightGoal
+    switch (req.body.weightGoal) {
+      case 0:
+        calorieIntake = Math.round(calorieIntake * 0.6)
+        break
+      case 1:
+        calorieIntake = Math.round(calorieIntake * 0.8)
+        break
+      case 2:
+        calorieIntake = Math.round(calorieIntake)
+        break
+      case 3:
+        calorieIntake = Math.round(calorieIntake * 1.2)
+        break
+      case 4:
+        calorieIntake = Math.round(calorieIntake * 1.4)
+        break
+      default:
+        calorieIntake = Math.round(calorieIntake)
+        break
+    }
+
+    // update calorie intake
+    userData.userCalorieIntake = calorieIntake
 
     // Update the data in the database
-    await docRef.update(userData);
+    await docRef.update(userData)
 
     return res.status(200).json({
       error: false,
       message: 'Information updated successfully!',
       data: userData
-    });
+    })
   } catch (error) {
     return res.status(500).json({
       error: true,
       message: error.message
-    });
+    })
   }
-};
+}
