@@ -775,7 +775,7 @@ exports.updateUserAssessment = async (req, res) => {
     const userBMI = Math.round(req.body.userWeight / (heightInMeters ** 2))
 
     // Get BMR value
-    userData.BMI = userBMI
+    userData.userBMI = userBMI
 
     // Get activity value
     let activityValue = 0
