@@ -8,14 +8,14 @@ const db = firebase.firestore()
 // register
 exports.register = (req, res) => {
   if (!req.body.email || !req.body.password) {
-    return res.status(422).json({
+    return res.status(200).json({
       error: true,
       message: 'Email and password is required'
     })
   }
 
   if (req.body.passwordConfirmation !== req.body.password) {
-    return res.status(400).json({
+    return res.status(200).json({
       error: true,
       message: 'Password didnt match'
     })
@@ -35,7 +35,7 @@ exports.register = (req, res) => {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/weak-password') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
@@ -51,7 +51,7 @@ exports.register = (req, res) => {
 // login
 exports.login = (req, res) => {
   if (!req.body.email || !req.body.password) {
-    return res.status(422).json({
+    return res.status(200).json({
       error: true,
       message: 'Email and password is required'
     })
@@ -70,7 +70,7 @@ exports.login = (req, res) => {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/weak-password') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
@@ -102,14 +102,14 @@ exports.logout = (req, res) => {
         const errorCode = error.code
         const errorMessage = error.message
         if (errorCode === 'auth/too-many-requests') {
-          return res.status(500).json({
+          return res.status(200).json({
             error: true,
             message: errorMessage
           })
         }
       })
   } else {
-    return res.status(500).json({
+    return res.status(200).json({
       error: true,
       message: 'User not found!'
     })
@@ -132,7 +132,7 @@ exports.verifyEmail = (req, res) => {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/too-many-requests') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
@@ -143,7 +143,7 @@ exports.verifyEmail = (req, res) => {
 // forget password
 exports.forgetPassword = (req, res) => {
   if (!req.body.email) {
-    return res.status(422).json({
+    return res.status(200).json({
       error: true,
       message: 'Email is required'
     })
@@ -161,12 +161,12 @@ exports.forgetPassword = (req, res) => {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/invalid-email') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
       } else if (errorCode === 'auth/user-not-found') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
@@ -179,21 +179,21 @@ exports.editPassword = (req, res) => {
   const user = firebase.auth().currentUser
 
   if (!user) {
-    return res.status(401).json({
+    return res.status(200).json({
       error: true,
       message: 'User not authenticated'
     })
   }
 
   if (!req.body.password) {
-    return res.status(422).json({
+    return res.status(200).json({
       error: true,
       message: 'Password is required'
     })
   }
 
   if (req.body.passwordConfirmation !== req.body.password) {
-    return res.status(400).json({
+    return res.status(200).json({
       error: true,
       message: 'Passwords do not match'
     })
@@ -216,17 +216,17 @@ exports.editPassword = (req, res) => {
       const errorCode = error.code
       const errorMessage = error.message
       if (errorCode === 'auth/user-not-found') {
-        return res.status(404).json({
+        return res.status(200).json({
           error: true,
           message: 'User not found'
         })
       } else if (errorCode === 'auth/wrong-password') {
-        return res.status(401).json({
+        return res.status(200).json({
           error: true,
           message: 'Invalid current password'
         })
       } else if (errorCode === 'auth/weak-password') {
-        return res.status(500).json({
+        return res.status(200).json({
           error: true,
           message: errorMessage
         })
@@ -358,7 +358,7 @@ exports.addUserData = (req, res) => {
   }
 
   if (!req.body.fullName || !req.body.birthDate || !req.body.gender || !req.body.userWeight || !req.body.userHeight || req.body.activityLevel === undefined || req.body.stressLevel === undefined || req.body.weightGoal === undefined) {
-    return res.status(400).json({
+    return res.status(200).json({
       error: true,
       message: 'Required.'
     })
@@ -390,9 +390,9 @@ exports.getUserData = async (req, res) => {
   const doc = await docRef.get()
 
   if (!doc.exists) {
-    return res.status(404).json({
+    return res.status(200).json({
       error: true,
-      message: 'Data is not exists'
+      message: 'Data does not exist'
     })
   }
 
@@ -415,7 +415,7 @@ exports.addCalorieLog = async (req, res) => {
   const { userId } = req.params
 
   if (!req.body.foodName || !req.body.foodCalories || !req.body.fnbType || req.body.mealTime === undefined) {
-    return res.status(400).json({
+    return res.status(200).json({
       error: true,
       message: 'Required.'
     })
@@ -521,7 +521,7 @@ exports.getDailyCalorieLog = async (req, res) => {
 
   const doc = await logCollection.get()
   if (!doc.exists) {
-    return res.status(404).json({
+    return res.status(200).json({
       error: true,
       message: 'Data does not exist'
     })
@@ -560,7 +560,7 @@ exports.getMonthlyCalorieLog = async (req, res) => {
     })
 
     if (totalMonthlyCalories === 0) {
-      return res.status(404).json({
+      return res.status(200).json({
         error: true,
         message: 'Data does not exist'
       })
@@ -572,7 +572,7 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       totalMonthlyCalories
     })
   } catch (e) {
-    return res.status(404).json({
+    return res.status(200).json({
       error: true,
       message: 'Data does not exist'
     })
@@ -587,7 +587,7 @@ exports.getFoodData = async (req, res) => {
   try {
     const doc = await docRef.get()
     if (!doc.exists) {
-      return res.status(404).json({
+      return res.status(200).json({
         error: true,
         message: 'Data does not exist'
       })
@@ -739,7 +739,7 @@ exports.updateUserAssessment = async (req, res) => {
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return res.status(404).json({
+      return res.status(200).json({
         error: true,
         message: 'Data does not exist.'
       })
