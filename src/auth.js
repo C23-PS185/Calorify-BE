@@ -654,7 +654,7 @@ exports.editUserData = async (req, res) => {
       const originalExtension = file.originalname.split('.').pop()
 
       // Generate a unique filename with the original file extension
-      const filename = `${userId}.${originalExtension}`
+      const filename = `${userId}-${updatedAt}.${originalExtension}`
 
       // Upload the file to Firebase Storage
       const fileRef = bucket.file(`profile/${filename}`)
