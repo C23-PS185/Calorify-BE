@@ -390,7 +390,7 @@ exports.getUserData = async (req, res) => {
   const doc = await docRef.get()
 
   if (!doc.exists) {
-    return res.status(500).json({
+    return res.status(404).json({
       error: true,
       message: 'Data is not exists'
     })
@@ -521,7 +521,7 @@ exports.getDailyCalorieLog = async (req, res) => {
 
   const doc = await logCollection.get()
   if (!doc.exists) {
-    return res.status(500).json({
+    return res.status(404).json({
       error: true,
       message: 'Data does not exist'
     })
@@ -560,7 +560,7 @@ exports.getMonthlyCalorieLog = async (req, res) => {
     })
 
     if (totalMonthlyCalories === 0) {
-      return res.status(500).json({
+      return res.status(404).json({
         error: true,
         message: 'Data does not exist'
       })
@@ -572,7 +572,7 @@ exports.getMonthlyCalorieLog = async (req, res) => {
       totalMonthlyCalories
     })
   } catch (e) {
-    return res.status(500).json({
+    return res.status(404).json({
       error: true,
       message: 'Data does not exist'
     })
@@ -587,7 +587,7 @@ exports.getFoodData = async (req, res) => {
   try {
     const doc = await docRef.get()
     if (!doc.exists) {
-      return res.status(500).json({
+      return res.status(404).json({
         error: true,
         message: 'Data does not exist'
       })
@@ -739,7 +739,7 @@ exports.updateUserAssessment = async (req, res) => {
     const doc = await docRef.get()
 
     if (!doc.exists) {
-      return res.status(500).json({
+      return res.status(404).json({
         error: true,
         message: 'Data does not exist.'
       })
