@@ -1,15 +1,25 @@
-# Docs
+# Calorify-BE
 
-npm version 9.6.7
+This repository contains the server-side code and database setup for the Calorify application.
 
-node js version v18.16.0
+## Table of Content
 
-# Setup Environment
+- [Introduction](#introduction)
+- [Environment](#environment)
+- [API URL](#api-url)
 
-1. `npm install nodemon`
-2. `npm install express`
-3. `npm install firebase`
-4. `npm install eslint@config`
-5. `npm install dotenv`
 
-To start use `npm run start-dev`
+## Introduction
+
+Calorify is a personalized calorie tracking app aimed at promoting healthy eating habits and preventing non-communicable diseases (NCDs).
+
+## Environment
+
+Calorify Backend runs with :
+  1. Express JS
+  2. GCP App Engine
+  3. Cloud Build
+  4. Firebase Authentication, Firebase Storage, Firestore Database
+
+## API URL
+https://backend-dot-calorify-app.et.r.appspot.com/api/
