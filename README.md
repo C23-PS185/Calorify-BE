@@ -8,6 +8,7 @@ This repository contains the server-side code and database setup for the Calorif
 - [Environment](#environment)
 - [Configuration](#configuration)
 - [API Documentation](#api-documentation)
+- [Running the server](#running-the-server)
 - [API URL](#api-url)
 
 
@@ -55,9 +56,17 @@ FIREBASE_MEASUREMENT_ID=""
   "client_x509_cert_url": "",
   "universe_domain": ""
 }
-
 ```
 
+## Running the server
+- Install required modules
+```
+npm run install
+```
+- Start the server
+```
+npm run start
+```
 ## API Documentation 
 https://documenter.getpostman.com/view/26324010/2s93saZsni#c17f004c-e341-44fc-abdd-1b809b4691ba
 
